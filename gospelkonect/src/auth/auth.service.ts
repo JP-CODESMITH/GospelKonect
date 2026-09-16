@@ -1,14 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Post } from '@nestjs/common';
+// import { popScheduler } from 'rxjs/internal/util/args';
 
 
-export type user ={
+interface User { 
     username: string;
     password: string;
 }
 
 
-const users: user[] = [
-    {
+// const users: user[] = [
+//     {
+//         username: 'admin',
+//         password: 'admin'
+//     },
+//     {
+//         username: 'user',
+//         password: 'user'
+//     }
+// ]
+
+
+@Injectable()
+export class AuthService {
+    private users: User[]=[
+          {
         username: 'admin',
         password: 'admin'
     },
@@ -16,16 +31,11 @@ const users: user[] = [
         username: 'user',
         password: 'user'
     }
+
 ]
-
-
-@Injectable()
-export class AuthService {
-    async findUserByUsername(username: string): Promise<user | undefined> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(users.find(user => user.username === username));
-            }, 1000);
-        });
-    }
+findUserByUsername(name:string=''){
+    return this.users.filter((user)=>{
+        user.username.toLowerCase().includes(name.toLowerCase())
+    })
+}    
 }
