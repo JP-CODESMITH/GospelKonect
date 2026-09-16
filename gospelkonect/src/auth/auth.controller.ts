@@ -1,42 +1,23 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { isString } from '@nestjs/common/internal';
+import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service.js'
-import { CreateUserDtos } from '../dtos/authentication.dto.js';
+import { CreateUserDtos, LoginUserDtos } from '../dtos/authentication.dto.js';
 
 
 @Controller('auth')
 export class AuthController {
-    @Post('login/:username/:password')
-    login(
-        // @Body()
-    // CreateUserDtos:CreateUserDtos,
-        @Param('username') username: string,
-        @Param('password') password: string,
-    ): any {
-        if (isString(username) && isString(password)) {
-            const authService = new AuthService();
-            
-            return authService.findUserByUsername(username);
-        } else {
-            return 'Invalid username or password.';
-        }
+    constructor(private readonly authService: AuthService) {}
+    @Post('login')
+    async login(@Body() body: LoginUserDtos): Promise<boolean> {
+        return this.authService.login(body.password, body.email);
     }
-    @Get()
-    getUsers(@Query('name') name:string){
-        const users= [
-            {
-                id:1, name: 'John Paul Ogirima'
-            },
-            {
-                id:2, name: 'Programmer'
-            }
-        ]
-         if (name){
-            return users.filter((user)=>{
-                user.name.toLowerCase().includes(name.toLowerCase())
-            })
-         }
-
-         return users;
+    @Post('register')
+    async registerUser(@Body() body: CreateUserDtos): Promise<unknown> {
+        // NOTE (fix): no manual field checks or try/catch here. The DTO decorators
+        // plus the global ValidationPipe already reject bad input with 400, and
+        // service errors (400/409) must propagate so Nest sets the right status.
+        // The old try/catch returned every error as a 200 string, hiding failures.
+        // Args are (password, username, email) to match AuthService.registerUser,
+        // which now saves `username` to the schema's username column.
+        return this.authService.registerUser(body.password, body.username, body.email);
     }
 }
