@@ -3,10 +3,25 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+// Generated model type, so SafeUser stays in sync with the schema automatically.
+import type { User } from '@prisma/client';
 import { HashingService } from './hash/hash.service.js';
+import { TokenService } from './token/token.service.js';
+import { LoginRateLimitService } from './rate-limit/rate-limit.service.js';
+
+/** What every credential exchange hands back to the client. */
+export interface AuthSession {
+  accessToken: string; // 15m, sent as `Authorization: Bearer <t>`
+  refreshToken: string; // 7d, sent back only in body of /auth/refresh and /auth/logout
+  user: SafeUser; // Never includes passwordHash
+}
+
+/** A Prisma User with the credential column removed. */
+type SafeUser = Omit<User, 'passwordHash'>;
 
 @Injectable()
 export class AuthService {
@@ -17,9 +32,17 @@ export class AuthService {
   constructor(
     private readonly hashingService: HashingService,
     private readonly prisma: PrismaService,
+    // Issues/verifies/revokes JWTs and maintains their Redis records.
+    private readonly tokenService: TokenService,
+    // Clears the failed-login counter after a good password check.
+    private readonly rateLimit: LoginRateLimitService,
   ) {}
 
-  async registerUser(password: string, username: string, email: string) {
+  /**
+   * Creates an account. Returns the new user without any token — the client is
+   * expected to call /auth/login next, matching the Register → Login flow.
+   */
+  async registerUser(password: string, username: string, email: string): Promise<SafeUser> {
     // NOTE (fix): basic length guard kept here so the service is safe even when
     // called directly (e.g. in tests) with the global ValidationPipe bypassed.
     // Detailed format rules (valid email, etc.) live on the DTO via class-validator.
@@ -70,7 +93,15 @@ export class AuthService {
     return safeUser;
   }
 
-  async login(password: string, email: string): Promise<boolean> {
+  /**
+   * Verifies credentials and mints a token pair. Throws 401 on bad credentials
+   * and 429 once the rate limit trips; on success it resets that limit.
+   */
+  async login(
+    password: string,
+    email: string,
+    ip: string,
+  ): Promise<AuthSession> {
     // NOTE (fix): look up by unique email only. The previous version passed
     // `{ email, passwordHash }` to findUnique, which Prisma rejects because that
     // combination is not a defined unique constraint.
@@ -100,6 +131,94 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    return true;
+
+    // Correct password: forget the recent failures so a mistyped password a
+    // moment ago doesn't count against this user.
+    await this.rateLimit.clear(email, ip);
+
+    return this.issueSession(user);
+  }
+
+  /**
+   * Exchanges a valid refresh token for a brand-new pair, revoking the old one
+   * first (rotation) so a stolen refresh token can only be used once.
+   */
+  async refresh(userId: string, currentRefreshJti: string): Promise<AuthSession> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      // Token was valid but the account was deleted since — treat as logged out.
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Revoke before issuing: if signing fails, the user is logged out rather
+    // than left holding two live tokens.
+    await this.tokenService.revokeRefreshToken(userId, currentRefreshJti);
+
+    return this.issueSession(user);
+  }
+
+  /**
+   * Logs one session out: revokes its refresh token (or all of them when the
+   * client doesn't say which) and deny-lists the presented access token so it
+   * dies now instead of at its 15m expiry.
+   */
+  async logout(
+    userId: string,
+    rawAccessToken: string,
+    accessJti: string,
+    refreshTokenRaw?: string,
+  ): Promise<void> {
+    // Narrow to the single session when the client supplied a refresh token;
+    // otherwise fall back to closing everything rather than leaving a live
+    // refresh token behind.
+    const refreshJti = refreshTokenRaw
+      ? this.tokenService.decodeRefreshJti(refreshTokenRaw)
+      : undefined;
+
+    if (refreshJti) {
+      await this.tokenService.revokeRefreshToken(userId, refreshJti);
+    } else {
+      await this.tokenService.revokeAllRefreshTokens(userId);
+    }
+    await this.denyAccessToken(userId, rawAccessToken, accessJti);
+  }
+
+  /** Logs the user out of every device: all refresh sessions plus this one. */
+  async logoutAll(userId: string, rawAccessToken: string, accessJti: string): Promise<void> {
+    await this.tokenService.revokeAllRefreshTokens(userId);
+    await this.denyAccessToken(userId, rawAccessToken, accessJti);
+  }
+
+  /** Loads the caller's own record, for GET /auth/me. */
+  async me(userId: string): Promise<SafeUser> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      // Token is valid but the account no longer exists.
+      throw new NotFoundException('User not found');
+    }
+    const { passwordHash: _omitted, ...safeUser } = user;
+    return safeUser;
+  }
+
+  // --- private helpers -------------------------------------------------------
+
+  /** Mints both tokens for an authenticated user and strips the hash. */
+  private async issueSession(user: User): Promise<AuthSession> {
+    const [accessToken, refresh] = await Promise.all([
+      this.tokenService.signAccessToken(user),
+      this.tokenService.signRefreshToken(user.id),
+    ]);
+
+    const { passwordHash: _omitted, ...safeUser } = user;
+    return { accessToken, refreshToken: refresh.token, user: safeUser };
+  }
+
+  /** Records the access token as revoked for the remainder of its lifetime. */
+  private async denyAccessToken(
+    userId: string,
+    rawAccessToken: string,
+    accessJti: string,
+  ): Promise<void> {
+    await this.tokenService.denyAccessToken(userId, accessJti, rawAccessToken);
   }
 }
