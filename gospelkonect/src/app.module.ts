@@ -4,6 +4,9 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import envConfig from './config/env.config.js';
+// Under `prisma-composer dev` cwd is the artifact dir, not the repo, so the
+// implicit '.env' lookup misses; resolve it from the project root instead.
+import { projectEnvFile } from './config/project-root.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -20,6 +23,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [envConfig],
+      envFilePath: projectEnvFile(),
     }),
     // Registers all /auth/* routes (login, register). Without this import,
     // Nest never mounts AuthController and every /auth call returns 404.

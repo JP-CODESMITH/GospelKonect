@@ -8,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 // `join` keeps a trailing slash in UPLOAD_DIR from producing a broken URL.
 import { join } from 'node:path';
 import { AppModule } from './app.module.js';
+import { projectRoot } from './config/project-root.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -22,7 +23,9 @@ async function bootstrap() {
   // the Express app directly, so the api/v1 global prefix does not apply to
   // them — which is exactly what a stored avatar URL (/uploads/avatars/x.png)
   // expects.
-  app.useStaticAssets(join(process.cwd(), app.get(ConfigService).get('upload.dir') ?? 'uploads'), {
+  // projectRoot(), not cwd: under Composer's dev runner cwd is the service
+  // artifact directory, and writes there would vanish on the next rebuild.
+  app.useStaticAssets(join(projectRoot(), app.get(ConfigService).get('upload.dir') ?? 'uploads'), {
     prefix: '/uploads',
   });
 
