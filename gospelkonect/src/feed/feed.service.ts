@@ -21,6 +21,7 @@ import {
   toPostResponse,
   type PostResponse,
 } from '../posts/post.constants.js';
+import { loadPostMetrics } from '../posts/post-metrics.js';
 import { FeedCacheService } from './feed-cache.service.js';
 import type { FeedQueryDto } from '../dtos/feed.dto.js';
 
@@ -112,7 +113,7 @@ export class FeedService {
 
     if (cursor.tier === 0) {
       // Continue tier 0 from where we stopped…
-      const first = await this.fetch(this.tier0(userId), 0, limit, this.after(cursor));
+      const first = await this.fetch(userId, this.tier0(userId), 0, limit, this.after(cursor));
       if (first.length === limit) {
         // Still inside tier 0 — hand back the continuation token immediately
         // rather than issuing a second query we would throw away.
@@ -121,14 +122,14 @@ export class FeedService {
       // …then top up from the newest tier 1 posts (tier 1 starts over: it has
       // no position of its own until we actually enter it).
       const room = limit - first.length;
-      const rest = await this.fetch(this.tier1(userId), 0, room);
+      const rest = await this.fetch(userId, this.tier1(userId), 0, room);
       const items = [...first, ...rest];
       // Once any tier 1 row appears the cursor must point into tier 1 —
       // resuming in tier 0 would re-serve rows we already handed out.
       return this.build(items, limit, total, null, cursorAt(items, rest.length ? 1 : 0));
     }
 
-    const rest = await this.fetch(this.tier1(userId), 0, limit, this.after(cursor));
+    const rest = await this.fetch(userId, this.tier1(userId), 0, limit, this.after(cursor));
     return this.build(rest, limit, total, null, cursorAt(rest, 1));
   }
 
@@ -150,8 +151,8 @@ export class FeedService {
     const take0 = Math.max(0, Math.min(limit - intoTier1, tier0Total - skip0));
 
     const [first, rest] = await Promise.all([
-      this.fetch(this.tier0(userId), skip0, take0),
-      this.fetch(this.tier1(userId), intoTier1, limit - take0),
+      this.fetch(userId, this.tier0(userId), skip0, take0),
+      this.fetch(userId, this.tier1(userId), intoTier1, limit - take0),
     ]);
 
     const items = [...first, ...rest];
@@ -188,6 +189,7 @@ export class FeedService {
   }
 
   private async fetch(
+    userId: string,
     where: Prisma.PostWhereInput,
     skip: number,
     take: number,
@@ -202,9 +204,15 @@ export class FeedService {
       take,
       select: POST_SELECT,
     });
-    // Flatten attachments here, before the cache: cached pages are then
-    // exactly the wire shape and need no rewriting on read.
-    return rows.map(toPostResponse);
+    // Flatten attachments and load the tallies here, before the cache: cached
+    // pages are then exactly the wire shape — including this reader's own
+    // reactions, which is safe because the cache key is already per user.
+    const metrics = await loadPostMetrics(
+      this.prisma,
+      rows.map((row) => row.id),
+      userId,
+    );
+    return rows.map((row) => toPostResponse(row, metrics.get(row.id)));
   }
 
   private build(

@@ -24,6 +24,15 @@ const postRow = {
   media: [] as { media: { id: string; kind: 'IMAGE'; mimeType: string; bytes: number } }[],
 };
 
+// Phase 5: every post response also carries its engagement tallies. A freshly
+// read post with nothing happening around it answers with the zeroed set.
+const withMetrics = (row: typeof postRow) => ({
+  ...row,
+  commentCount: 0,
+  reactions: { LIKE: 0, AMEN: 0, LOVE: 0 },
+  viewerReaction: null,
+});
+
 const page = (page = 1, limit = 20) => {
   const dto = new PaginationDto();
   dto.page = page;
@@ -71,6 +80,15 @@ describe('PostsService', () => {
     postMedia: {
       findMany: vi.fn(async () => []),
       deleteMany: vi.fn(async () => ({ count: 0 })),
+    },
+    // Phase 5: comment/reaction tallies are loaded per page (post-metrics).
+    // Empty by default — "no comments, no reactions, anonymous reader".
+    comment: {
+      groupBy: vi.fn(async () => []),
+    },
+    reaction: {
+      groupBy: vi.fn(async () => []),
+      findMany: vi.fn(async () => []),
     },
     // update() wraps the join-row replacement and the content change in one
     // transaction; run the callback against this same mock object.
@@ -208,7 +226,7 @@ describe('PostsService', () => {
   // --- getById --------------------------------------------------------------
 
   it('returns a post by id', async () => {
-    await expect(service.getById('post_1')).resolves.toEqual(postRow);
+    await expect(service.getById('post_1')).resolves.toEqual(withMetrics(postRow));
     expect(prisma.post.findUnique).toHaveBeenCalledWith({
       where: { id: 'post_1' },
       select: expect.any(Object),
@@ -231,7 +249,7 @@ describe('PostsService', () => {
       expect.objectContaining({ orderBy: { createdAt: 'desc' }, skip: 10, take: 10 }),
     );
     expect(result.meta).toEqual({ page: 2, limit: 10, total: 45, totalPages: 5 });
-    expect(result.items).toEqual([postRow]);
+    expect(result.items).toEqual([withMetrics(postRow)]);
   });
 
   it('never reports totalPages of 0 for an empty feed', async () => {
@@ -288,7 +306,7 @@ describe('PostsService', () => {
       data: { content: 'edited' },
       select: expect.any(Object),
     });
-    expect(result).toEqual(postRow);
+    expect(result).toEqual(withMetrics(postRow));
   });
 
   it('404s when the post does not exist, before any ownership question', async () => {

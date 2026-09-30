@@ -2,7 +2,7 @@
 // Kept in its own file — not inside PostsService — so FeedService can import
 // the selects without importing the service or creating a module dependency.
 
-import type { Prisma } from '@prisma/client';
+import type { Prisma, ReactionType } from '@prisma/client';
 import { toMediaDto, type MediaDto } from '../media/media.types.js';
 
 // Author embedded in every post response — deliberately slim (no email, bio or
@@ -33,16 +33,47 @@ export const POST_SELECT = {
 /** Exactly what Prisma returns for POST_SELECT — nested, no URLs. */
 export type RawPost = Prisma.PostGetPayload<{ select: typeof POST_SELECT }>;
 
+/** The three reaction tallies of a post, keyed by type. */
+export type ReactionTally = Record<ReactionType, number>;
+
+/**
+ * Engagement numbers attached to every post response (Phase 5). They are
+ * loaded per page by post-metrics.ts, never inside POST_SELECT itself, so
+ * cached feed pages keep carrying them and a plain row without metrics is
+ * simply zeroed rather than malformed.
+ */
+export interface PostMetrics {
+  commentCount: number;
+  reactions: ReactionTally;
+  /** The signed-in viewer's own reaction; null for anonymous readers. */
+  viewerReaction: ReactionType | null;
+}
+
+export const EMPTY_REACTIONS: ReactionTally = { LIKE: 0, AMEN: 0, LOVE: 0 };
+
+export const EMPTY_METRICS: PostMetrics = {
+  commentCount: 0,
+  reactions: EMPTY_REACTIONS,
+  viewerReaction: null,
+};
+
 /** What every post-shaped endpoint returns: attachments flattened, URL set. */
-export type PostResponse = Omit<RawPost, 'media'> & { media: MediaDto[] };
+export type PostResponse = Omit<RawPost, 'media'> & { media: MediaDto[] } & PostMetrics;
 
 /**
  * One row → one response. The media URL is a stable /media/:id/file link
  * derived from the id, so this stays synchronous: no signing round trip on
- * every feed row, and cached pages stay valid.
+ * every feed row, and cached pages stay valid. `metrics` defaults to the
+ * zeroed tallies, which is exactly right for a brand-new post.
  */
-export function toPostResponse(raw: RawPost): PostResponse {
-  return { ...raw, media: raw.media.map((row) => toMediaDto(row.media)) };
+export function toPostResponse(raw: RawPost, metrics: PostMetrics = EMPTY_METRICS): PostResponse {
+  return {
+    ...raw,
+    media: raw.media.map((row) => toMediaDto(row.media)),
+    commentCount: metrics.commentCount,
+    reactions: { ...metrics.reactions },
+    viewerReaction: metrics.viewerReaction,
+  };
 }
 
 /** Ordering used by every post list: newest first, id breaks timestamp ties. */

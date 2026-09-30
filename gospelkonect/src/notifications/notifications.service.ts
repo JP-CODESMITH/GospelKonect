@@ -95,6 +95,20 @@ export class NotificationsService {
    * them — a typo should not break publishing.
    */
   async notifyMentions(postId: string, actorId: string, handles: string[]): Promise<void> {
+    await this.notifyMentionsFor('post', postId, actorId, handles);
+  }
+
+  /**
+   * Same lookup, any entity: @handles in a comment produce MENTION rows
+   * pointing at that comment. Runs after the entity exists, so a lookup
+   * failure must never roll back (or 500) the publish that already landed.
+   */
+  async notifyMentionsFor(
+    entityType: string,
+    entityId: string,
+    actorId: string,
+    handles: string[],
+  ): Promise<void> {
     if (handles.length === 0) return;
 
     try {
@@ -108,14 +122,12 @@ export class NotificationsService {
           userId: user.id,
           actorId,
           type: 'MENTION',
-          entityType: 'post',
-          entityId: postId,
+          entityType,
+          entityId,
         });
       }
     } catch (err) {
-      // Runs inside PostsService.create: the post exists by now, so failing
-      // here would report a 500 for a publish that already succeeded.
-      this.logger.error(`mention lookup failed for ${postId}: ${(err as Error).message}`);
+      this.logger.error(`mention lookup failed for ${entityType} ${entityId}: ${(err as Error).message}`);
     }
   }
 

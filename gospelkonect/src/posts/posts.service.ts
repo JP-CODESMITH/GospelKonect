@@ -20,6 +20,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { extractMentions } from '../notifications/mentions.js';
 import { MediaService } from '../media/media.service.js';
 
+import { loadPostMetrics } from './post-metrics.js';
 import {
   POST_SELECT,
   toPostResponse,
@@ -66,15 +67,19 @@ export class PostsService {
     return toPostResponse(post);
   }
 
-  /** One post by id, or 404. */
-  async getById(id: string): Promise<PostResponse> {
+  /**
+   * One post by id, or 404. `viewerId` (when the reader is signed in) is what
+   * fills viewerReaction; anonymous readers get null instead of a wasted query.
+   */
+  async getById(id: string, viewerId?: string | null): Promise<PostResponse> {
     const post = await this.prisma.post.findUnique({ where: { id }, select: POST_SELECT });
     if (!post) throw new NotFoundException('Post not found');
-    return toPostResponse(post);
+    const metrics = await loadPostMetrics(this.prisma, [id], viewerId);
+    return toPostResponse(post, metrics.get(id));
   }
 
   /** Global feed, newest first. */
-  async list(query: PaginationDto): Promise<Paginated<PostResponse>> {
+  async list(query: PaginationDto, viewerId?: string | null): Promise<Paginated<PostResponse>> {
     const [total, rows] = await Promise.all([
       this.prisma.post.count(),
       this.prisma.post.findMany({
@@ -85,13 +90,24 @@ export class PostsService {
         select: POST_SELECT,
       }),
     ]);
-    return paginated(rows.map(toPostResponse), total, query.page, query.limit);
+    const metrics = await loadPostMetrics(
+      this.prisma,
+      rows.map((row) => row.id),
+      viewerId,
+    );
+    return paginated(
+      rows.map((row) => toPostResponse(row, metrics.get(row.id))),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
   /** One author's timeline, newest first. 404 when the handle doesn't exist. */
   async listByUsername(
     username: string,
     query: PaginationDto,
+    viewerId?: string | null,
   ): Promise<Paginated<PostResponse>> {
     const author = await this.prisma.user.findFirst({
       where: { username: { equals: username, mode: 'insensitive' } },
@@ -112,11 +128,26 @@ export class PostsService {
         select: POST_SELECT,
       }),
     ]);
-    return paginated(rows.map(toPostResponse), total, query.page, query.limit);
+    const metrics = await loadPostMetrics(
+      this.prisma,
+      rows.map((row) => row.id),
+      viewerId,
+    );
+    return paginated(
+      rows.map((row) => toPostResponse(row, metrics.get(row.id))),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
   /** Replaces the body (and, when mediaIds is present, the attachments). */
-  async update(id: string, userId: string, dto: UpdatePostDto): Promise<PostResponse> {
+  async update(
+    id: string,
+    userId: string,
+    dto: UpdatePostDto,
+    viewerId?: string | null,
+  ): Promise<PostResponse> {
     await this.requireAuthor(id, userId);
     // undefined = keep the current attachments; a list (even []) replaces them.
     const mediaIds =
@@ -145,9 +176,12 @@ export class PostsService {
         select: POST_SELECT,
       });
     });
-    // Cached pages still carry the old body until the version moves.
+    // Cached pages still carry the old body until the version moves. The
+    // tallies were NOT reset by the edit, so they are reloaded rather than
+    // zeroed — an edited post keeps its comments and reactions.
     await this.feedCache.invalidate();
-    return toPostResponse(updated);
+    const metrics = await loadPostMetrics(this.prisma, [id], viewerId);
+    return toPostResponse(updated, metrics.get(id));
   }
 
   /** Permanently removes the caller's own post and its unshared media. */

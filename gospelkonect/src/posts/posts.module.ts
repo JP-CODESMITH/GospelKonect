@@ -6,6 +6,7 @@ import { PostsService } from './posts.service.js';
 import { FeedModule } from '../feed/feed.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { MediaModule } from '../media/media.module.js';
+import { EngagementModule } from '../engagement/engagement.module.js';
 
 // Phase 4: the post feed, single-post reads, edits and deletes.
 // PrismaModule is @Global and ConfigModule is global, so neither is listed.
@@ -19,7 +20,9 @@ import { MediaModule } from '../media/media.module.js';
   // NotificationsModule: publishing a post notifies everyone it mentions.
   // MediaModule: PostsService validates attachment ids and cleans up orphaned
   // blobs when a post is deleted.
-  imports: [AuthModule, FeedModule, NotificationsModule, MediaModule],
+  // EngagementModule: the reaction routes hang off PostsController but the
+  // service lives there; it imports Feed/Notifications too, never PostsModule.
+  imports: [AuthModule, FeedModule, NotificationsModule, MediaModule, EngagementModule],
   // Two controllers on purpose: /posts/* and /users/:username/posts.
   controllers: [PostsController, UserPostsController],
   providers: [PostsService],

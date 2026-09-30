@@ -14,6 +14,7 @@ import { PostsModule } from './posts/posts.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { MediaModule } from './media/media.module.js';
+import { EngagementModule } from './engagement/engagement.module.js';
 
 @Module({
   // AppController was previously not registered here, so GET /api/v1 answered
@@ -46,6 +47,8 @@ import { MediaModule } from './media/media.module.js';
     NotificationsModule,
     // Phase 8: uploads (post attachments, avatars) and /media routes.
     MediaModule,
+    // Phase 5: comments and reactions under /posts and /comments.
+    EngagementModule,
   ],
 })
 export class AppModule {}

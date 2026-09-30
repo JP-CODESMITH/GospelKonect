@@ -33,6 +33,12 @@ describe('FeedService', () => {
       count: vi.fn(),
       findMany: vi.fn(),
     },
+    // Phase 5 tallies: no comments/reactions unless a test says otherwise.
+    comment: { groupBy: vi.fn(async () => []) },
+    reaction: {
+      groupBy: vi.fn(async () => []),
+      findMany: vi.fn(async () => []),
+    },
   };
   const cache = {
     get: vi.fn(),

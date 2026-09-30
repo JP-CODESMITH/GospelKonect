@@ -33,6 +33,9 @@ model User {
   // Phase 8: every blob the account uploaded — post attachments and the
   // profile picture alike. Cascade so deleting an account takes its files.
   media                Media[]
+  // Phase 5: discussion and reactions.
+  comments             Comment[]         @relation("CommentAuthor")
+  reactions            Reaction[]
 }
 
 // What caused a notification. The COMMENT/REPLY/REACTION values belong to
@@ -89,6 +92,9 @@ model Post {
 
   // Phase 8: attachment slots, ordered by PostMedia.position.
   media  PostMedia[]
+  // Phase 5: the conversation and the reactions to it.
+  comments  Comment[]
+  reactions Reaction[]
 
   // Drives GET /posts (global feed, newest first).
   @@index([createdAt(sort: Desc)])
@@ -145,6 +151,53 @@ model PostMedia {
   @@unique([postId, position])
   // Reverse lookup when a blob is deleted: is anything still attached?
   @@index([mediaId])
+}
+
+// How someone reacted to a post. One row per (user, post): reacting again
+// REPLACES the type, and the primary key makes a duplicate impossible.
+enum ReactionType {
+  LIKE
+  AMEN
+  LOVE
+}
+
+model Reaction {
+  userId    String
+  postId    String
+  type      ReactionType
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // "Which posts did I react to" and the per-post count breakdown.
+  @@id([userId, postId])
+  @@index([postId, type])
+}
+
+// A comment on a post, or a reply to another comment (parentId). Replies may
+// nest to any depth — the API surfaces parentId so clients can thread them.
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  // Set when this row is a reply; null for a top-level comment. Cascade, so
+  // deleting a thread cannot leave children pointing at a missing parent.
+  parentId  String?
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author   User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  children Comment[] @relation("CommentThread")
+
+  // One post's conversation in chronological order.
+  @@index([postId, createdAt])
+  // Counting a thread's replies / deleting a user's comments.
+  @@index([parentId])
+  @@index([authorId])
 }
 
 // One row per directed follow relationship. The composite primary key makes
