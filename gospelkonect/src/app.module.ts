@@ -13,6 +13,7 @@ import { UsersModule } from './users/users.module.js';
 import { PostsModule } from './posts/posts.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { MediaModule } from './media/media.module.js';
 
 @Module({
   // AppController was previously not registered here, so GET /api/v1 answered
@@ -43,6 +44,8 @@ import { NotificationsModule } from './notifications/notifications.module.js';
     FeedModule,
     // Phase 7: notification records, inbox and Redis publish.
     NotificationsModule,
+    // Phase 8: uploads (post attachments, avatars) and /media routes.
+    MediaModule,
   ],
 })
 export class AppModule {}

@@ -18,9 +18,11 @@ import type { CreatePostDto, UpdatePostDto } from '../dtos/post.dto.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { extractMentions } from '../notifications/mentions.js';
+import { MediaService } from '../media/media.service.js';
 
 import {
   POST_SELECT,
+  toPostResponse,
   type PostResponse,
 } from './post.constants.js';
 
@@ -36,25 +38,39 @@ export class PostsService {
     private readonly feedCache: FeedCacheService,
     // Mentions in the body become notifications once the post exists.
     private readonly notifications: NotificationsService,
+    // Attachment validation (ownership, the 4-images-or-1-video rule) and the
+    // orphan cleanup that follows a delete live with the media pipeline.
+    private readonly media: MediaService,
   ) {}
 
-  /** Publishes a post as `authorId` and returns it with its author. */
+  /** Publishes a post as `authorId`, with its attachments, and returns it. */
   async create(authorId: string, dto: CreatePostDto): Promise<PostResponse> {
+    // Uploads happen first (POST /media); this only proves the ids are the
+    // caller's and re-attaches them in the order the body listed.
+    const mediaIds = await this.media.validateAttachments(authorId, dto.mediaIds ?? []);
     const post = await this.prisma.post.create({
-      data: { authorId, content: dto.content },
+      data: {
+        authorId,
+        content: dto.content,
+        ...(mediaIds.length > 0 && {
+          media: {
+            create: mediaIds.map((mediaId, position) => ({ mediaId, position })),
+          },
+        }),
+      },
       select: POST_SELECT,
     });
     await this.feedCache.invalidate();
     // Typo'd handles resolve to nothing, so a mention can never fail a publish.
     await this.notifications.notifyMentions(post.id, authorId, extractMentions(dto.content));
-    return post;
+    return toPostResponse(post);
   }
 
   /** One post by id, or 404. */
   async getById(id: string): Promise<PostResponse> {
     const post = await this.prisma.post.findUnique({ where: { id }, select: POST_SELECT });
     if (!post) throw new NotFoundException('Post not found');
-    return post;
+    return toPostResponse(post);
   }
 
   /** Global feed, newest first. */
@@ -69,7 +85,7 @@ export class PostsService {
         select: POST_SELECT,
       }),
     ]);
-    return paginated(rows, total, query.page, query.limit);
+    return paginated(rows.map(toPostResponse), total, query.page, query.limit);
   }
 
   /** One author's timeline, newest first. 404 when the handle doesn't exist. */
@@ -96,30 +112,58 @@ export class PostsService {
         select: POST_SELECT,
       }),
     ]);
-    return paginated(rows, total, query.page, query.limit);
+    return paginated(rows.map(toPostResponse), total, query.page, query.limit);
   }
 
-  /** Replaces the body of the caller's own post. */
+  /** Replaces the body (and, when mediaIds is present, the attachments). */
   async update(id: string, userId: string, dto: UpdatePostDto): Promise<PostResponse> {
     await this.requireAuthor(id, userId);
-    // Prisma bumps updatedAt on any update (@updatedAt), so an edit is
-    // distinguishable from the original publish time.
-    const updated = await this.prisma.post.update({
-      where: { id },
-      data: { content: dto.content },
-      select: POST_SELECT,
+    // undefined = keep the current attachments; a list (even []) replaces them.
+    const mediaIds =
+      dto.mediaIds === undefined
+        ? null
+        : await this.media.validateAttachments(userId, dto.mediaIds);
+
+    // One transaction: the old slot rows and the new content must agree, or a
+    // crash mid-way leaves a post with stale positions.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (mediaIds) {
+        await tx.postMedia.deleteMany({ where: { postId: id } });
+      }
+      return tx.post.update({
+        where: { id },
+        // Prisma bumps updatedAt on any update (@updatedAt), so an edit is
+        // distinguishable from the original publish time.
+        data: {
+          content: dto.content,
+          ...(mediaIds && mediaIds.length > 0 && {
+            media: {
+              create: mediaIds.map((mediaId, position) => ({ mediaId, position })),
+            },
+          }),
+        },
+        select: POST_SELECT,
+      });
     });
     // Cached pages still carry the old body until the version moves.
     await this.feedCache.invalidate();
-    return updated;
+    return toPostResponse(updated);
   }
 
-  /** Permanently removes the caller's own post. */
+  /** Permanently removes the caller's own post and its unshared media. */
   async remove(id: string, userId: string): Promise<void> {
     await this.requireAuthor(id, userId);
-    // Hard delete (Phase 4 decision). When media arrives, its files are
-    // unlinked here too, in the same request.
+    // Snapshot the attachments before the cascade wipes the join rows, so the
+    // blobs can be checked for orphans afterwards.
+    const attached = await this.prisma.postMedia.findMany({
+      where: { postId: id },
+      select: { mediaId: true },
+    });
+    // Hard delete (Phase 4 decision); PostMedia goes with it by cascade.
     await this.prisma.post.delete({ where: { id } });
+    // Only blobs nothing else points at are removed — a media row attached to
+    // another post survives, as does one the author still holds unattached.
+    await this.media.deleteOrphans(attached.map((row) => row.mediaId), userId);
     await this.feedCache.invalidate();
     // Notifications are polymorphic (not an FK), so orphan cleanup happens here.
     await this.notifications.removeForEntity('post', id);

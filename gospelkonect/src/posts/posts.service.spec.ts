@@ -1,13 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PostsService } from './posts.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { MediaService } from '../media/media.service.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 
-// What findUnique/create return once the POST_SELECT is applied: post scalars
-// plus the slim embedded author.
+// What findUnique/create return once POST_SELECT is applied: post scalars, the
+// slim embedded author, and Prisma's nested attachment rows ({ media: {...} }),
+// which toPostResponse flattens into media: [...] with URLs.
 const postRow = {
   id: 'post_1',
   content: 'Hello GospelKonect',
@@ -19,6 +21,7 @@ const postRow = {
     username: 'johndoe',
     avatar: null,
   },
+  media: [] as { media: { id: string; kind: 'IMAGE'; mimeType: string; bytes: number } }[],
 };
 
 const page = (page = 1, limit = 20) => {
@@ -46,6 +49,13 @@ describe('PostsService', () => {
     removeForEntity: vi.fn(),
   };
 
+  // Attachment rules live in MediaService; here it just echoes the ids it was
+  // asked to validate (empty by default, so text-only posts stay text-only).
+  const media = {
+    validateAttachments: vi.fn(async (_ownerId: string, ids: string[] = []) => ids),
+    deleteOrphans: vi.fn(async () => undefined),
+  };
+
   const prisma = {
     post: {
       create: vi.fn(),
@@ -58,6 +68,13 @@ describe('PostsService', () => {
     user: {
       findFirst: vi.fn(),
     },
+    postMedia: {
+      findMany: vi.fn(async () => []),
+      deleteMany: vi.fn(async () => ({ count: 0 })),
+    },
+    // update() wraps the join-row replacement and the content change in one
+    // transaction; run the callback against this same mock object.
+    $transaction: vi.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
   };
 
   beforeEach(async () => {
@@ -70,6 +87,7 @@ describe('PostsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: FeedCacheService, useValue: feedCache },
         { provide: NotificationsService, useValue: notifications },
+        { provide: MediaService, useValue: media },
       ],
     }).compile();
 
@@ -118,6 +136,73 @@ describe('PostsService', () => {
     await service.create('user_1', { content: 'plain' });
 
     expect(notifications.notifyMentions).toHaveBeenCalledWith('post_1', 'user_1', []);
+  });
+
+  // --- media attachments -----------------------------------------------------
+
+  it('attaches uploaded media in the order the body listed', async () => {
+    await service.create('user_1', { content: 'pic', mediaIds: ['m1', 'm2'] });
+
+    expect(media.validateAttachments).toHaveBeenCalledWith('user_1', ['m1', 'm2']);
+    expect(prisma.post.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          authorId: 'user_1',
+          content: 'pic',
+          media: {
+            create: [
+              { mediaId: 'm1', position: 0 },
+              { mediaId: 'm2', position: 1 },
+            ],
+          },
+        },
+      }),
+    );
+  });
+
+  it('publishes nothing when attachment validation fails', async () => {
+    media.validateAttachments.mockRejectedValueOnce(new BadRequestException('Unknown media id'));
+
+    await expect(
+      service.create('user_1', { content: 'pic', mediaIds: ['foreign'] }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.post.create).not.toHaveBeenCalled();
+  });
+
+  it('replaces the attachment list when mediaIds is present, leaves it when absent', async () => {
+    prisma.post.findUnique.mockResolvedValue({ authorId: 'user_1' });
+    prisma.post.update.mockResolvedValue(postRow);
+
+    await service.update('post_1', 'user_1', { content: 'edited', mediaIds: ['m2'] });
+
+    expect(prisma.postMedia.deleteMany).toHaveBeenCalledWith({ where: { postId: 'post_1' } });
+    expect(prisma.post.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { content: 'edited', media: { create: [{ mediaId: 'm2', position: 0 }] } },
+      }),
+    );
+
+    prisma.postMedia.deleteMany.mockClear();
+    await service.update('post_1', 'user_1', { content: 'edited again' });
+    // No mediaIds in the PATCH → the attachments are untouched.
+    expect(prisma.postMedia.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.post.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { content: 'edited again' } }),
+    );
+  });
+
+  it('hands the former attachments to media cleanup when the post is deleted', async () => {
+    prisma.post.findUnique.mockResolvedValue({ authorId: 'user_1' });
+    prisma.postMedia.findMany.mockResolvedValue([{ mediaId: 'm1' }, { mediaId: 'm2' }]);
+
+    await service.remove('post_1', 'user_1');
+
+    // Snapshot before the cascade, so orphan detection can still see them.
+    expect(prisma.postMedia.findMany).toHaveBeenCalledWith({
+      where: { postId: 'post_1' },
+      select: { mediaId: true },
+    });
+    expect(media.deleteOrphans).toHaveBeenCalledWith(['m1', 'm2'], 'user_1');
   });
 
   // --- getById --------------------------------------------------------------

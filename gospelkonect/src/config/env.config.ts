@@ -50,4 +50,15 @@ export default () => ({
     // (after dotenv) rather than at decoration time, which is too early.
     dir: process.env.UPLOAD_DIR ?? 'uploads',
   },
+
+  // --- Phase 8: media storage ----------------------------------------------
+  // Present only when an object-storage bucket is wired to this service —
+  // Composer injects all four (dev and the platform alike). All four or none:
+  // a partial set is a misconfiguration, not a reason to fall back to disk.
+  media: {
+    endpoint: process.env.COMPOSER_API_MEDIA_URL,
+    bucket: process.env.COMPOSER_API_MEDIA_BUCKET,
+    accessKeyId: process.env.COMPOSER_API_MEDIA_ACCESSKEYID,
+    secretAccessKey: process.env.COMPOSER_API_MEDIA_SECRETACCESSKEY,
+  },
 });

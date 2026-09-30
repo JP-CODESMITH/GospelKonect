@@ -14,8 +14,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-// FileInterceptor reads the multipart body into a Buffer, so the controller
-// never touches disk directly — LocalStorageService does that.
+// FileInterceptor reads the multipart body into a Buffer; MediaService decides
+// where the bytes are stored (bucket under Composer, uploads/ otherwise).
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
@@ -39,10 +39,8 @@ import { SearchUsersDto } from '../dtos/user-query.dto.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 import { UsersService } from './users.service.js';
 import { FollowsService } from './follows.service.js';
-import {
-  AVATAR_MAX_BYTES,
-  LocalStorageService,
-} from '../storage/local-storage.service.js';
+import { AVATAR_MAX_BYTES } from '../storage/local-storage.service.js';
+import { MediaService } from '../media/media.service.js';
 
 /** Shapes Swagger shows; kept in sync by the service return types. */
 type ProfileResponse = Awaited<ReturnType<UsersService['getProfile']>>;
@@ -56,9 +54,9 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly followsService: FollowsService,
-    // Injected here rather than in the controller delegating to a third
-    // service: only this endpoint needs to write bytes to disk.
-    private readonly storage: LocalStorageService,
+    // The avatar endpoint's half of the media pipeline: upload bytes, then
+    // repoint the profile (UsersService owns the row and the old-avatar cleanup).
+    private readonly media: MediaService,
   ) {}
 
   /**
@@ -141,8 +139,10 @@ export class UsersController {
   }
 
   /**
-   * Uploads a new avatar (multipart field `file`). The previous image is
-   * deleted after the database has been repointed at the new one.
+   * Uploads a new avatar (multipart field `file`) through the same pipeline as
+   * every other blob: bytes to storage, a Media row, and User.avatar pointing
+   * at its stable /media/:id/file URL. The previous avatar's row and object
+   * are removed after the profile has been repointed.
    */
   @Post('me/avatar')
   @UseGuards(AccessTokenGuard)
@@ -151,7 +151,7 @@ export class UsersController {
       // Reject oversized files while streaming, before they land in memory.
       limits: { fileSize: AVATAR_MAX_BYTES },
       // First line of defence on type: only image/* gets past multer at all.
-      // LocalStorageService re-checks against its allow-list afterwards.
+      // MediaService re-checks against its allow-list afterwards.
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           cb(new BadRequestException('Only image files are allowed'), false);
@@ -175,14 +175,12 @@ export class UsersController {
     if (!file) {
       throw new BadRequestException('Expected a "file" field with an image');
     }
-    if (file.size === 0) {
-      throw new BadRequestException('Uploaded file is empty');
-    }
-
-    // Storage picks a fresh UUID name, so nothing from the request is used as
-    // a path. The returned URL is what main.ts serves.
-    const url = await this.storage.saveAvatar(file.buffer, file.mimetype);
-    return this.usersService.setAvatar(user.sub, url);
+    // Images only, 2 MB — the caps this endpoint has always enforced.
+    const media = await this.media.upload(user.sub, file, {
+      imagesOnly: true,
+      maxBytes: AVATAR_MAX_BYTES,
+    });
+    return this.usersService.setAvatar(user.sub, media.url);
   }
 
   /** Follows another account. Idempotent: repeating it is still 204. */

@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Prisma, User } from '@prisma/client';
 import { LocalStorageService } from '../storage/local-storage.service.js';
+import { MediaService } from '../media/media.service.js';
 import type { UpdateUserDto } from '../dtos/update-user.dto.js';
 import type { SearchUsersDto } from '../dtos/user-query.dto.js';
 import { paginated, type Paginated } from '../common/pagination.js';
@@ -57,6 +58,8 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: LocalStorageService,
+    // Owns Media rows, so a superseded avatar's row and bytes go together.
+    private readonly media: MediaService,
   ) {}
 
   /**
@@ -140,8 +143,11 @@ export class UsersService {
 
     // After the DB points at the new file, drop the old one. Order matters:
     // deleting first would leave a window where the stored URL is dead.
+    // New-style avatars are Media rows (/api/v1/media/<id>/file); anything
+    // else is a legacy /uploads/avatars/... path from before Phase 8.
     if (current.avatar) {
-      await this.storage.deleteByUrl(current.avatar);
+      const wasMedia = await this.media.deleteByUrl(current.avatar, userId);
+      if (!wasMedia) await this.storage.deleteByUrl(current.avatar);
     }
     return this.toPublicUser(updated, true);
   }

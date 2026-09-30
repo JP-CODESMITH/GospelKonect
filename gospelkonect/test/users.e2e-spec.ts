@@ -2,8 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { access, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
 import { AppModule } from './../src/app.module.js';
 
 // Phase 3 end-to-end: profile reads/edits, the follow graph, discovery and the
@@ -23,8 +21,9 @@ describe('Users (e2e)', () => {
   let bobToken = '';
   let bobId = '';
 
-  // Avatars written by the upload tests, so the suite leaves no litter behind.
-  const writtenFiles: string[] = [];
+  // Media ids created by the upload tests; removed through the API itself in
+  // afterAll so repeated runs leave neither rows nor objects behind.
+  const writtenMedia: string[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -41,12 +40,26 @@ describe('Users (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Delete uploaded images before the app (and its config) goes away.
-    await Promise.all(writtenFiles.map((f) => unlink(f).catch(() => undefined)));
+    // Avatars are Media rows now: delete them through the pipeline that made
+    // them, which removes the row and the stored bytes together.
+    await Promise.all(
+      writtenMedia.map((id) =>
+        http()
+          .delete(`/api/v1/media/${id}`)
+          .set('Authorization', `Bearer ${aliceToken}`)
+          .then(
+            () => undefined,
+            () => undefined,
+          ),
+      ),
+    );
     await app.close();
   });
 
   const http = () => request(app.getHttpServer());
+
+  /** /api/v1/media/<id>/file → <id>. */
+  const mediaIdOf = (url: string): string => url.split('/')[4];
 
   /** Registers an account and returns its access token. */
   const register = async (email: string, username: string): Promise<string> => {
@@ -60,17 +73,6 @@ describe('Users (e2e)', () => {
       .send({ email, password })
       .expect(201);
     return login.body.accessToken as string;
-  };
-
-  // fs/promises has no exists() on every Node version — access() is the
-  // portable way to ask "is this file still here?".
-  const fileExists = async (path: string): Promise<boolean> => {
-    try {
-      await access(path);
-      return true;
-    } catch {
-      return false;
-    }
   };
 
   // 1x1 transparent PNG — a real image body so the type check sees valid bytes.
@@ -255,8 +257,10 @@ describe('Users (e2e)', () => {
   // --- discovery ------------------------------------------------------------
 
   it('finds users by name or username and excludes the caller', async () => {
+    // Search for the full handle: earlier runs left other bob* accounts behind,
+    // and a 4-character prefix would page past this run's user.
     const found = await http()
-      .get(`/api/v1/users?search=${bobName.slice(0, 4)}`)
+      .get(`/api/v1/users?search=${bobName}`)
       .set('Authorization', `Bearer ${aliceToken}`)
       .expect(200);
 
@@ -273,17 +277,20 @@ describe('Users (e2e)', () => {
 
   // --- avatar upload --------------------------------------------------------
 
-  it('stores an uploaded avatar and replaces it without leaving the old file', async () => {
+  it('stores an uploaded avatar and replaces it without leaving the old one', async () => {
     const first = await http()
       .post('/api/v1/users/me/avatar')
       .set('Authorization', `Bearer ${aliceToken}`)
       .attach('file', PNG, { filename: 'pixel.png', contentType: 'image/png' })
       .expect(201);
 
-    expect(first.body.avatar).toMatch(/^\/uploads\/avatars\/.+\.png$/);
-    const firstPath = join(process.cwd(), first.body.avatar as string);
-    writtenFiles.push(firstPath);
-    expect(await fileExists(firstPath)).toBe(true);
+    // Phase 8: an avatar is an ordinary Media row, so its URL is the stable
+    // file endpoint rather than a path into the uploads directory.
+    expect(first.body.avatar).toMatch(/^\/api\/v1\/media\/[0-9a-f-]{36}\/file$/);
+    const firstId = mediaIdOf(first.body.avatar as string);
+    writtenMedia.push(firstId);
+    // Reachable: the endpoint redirects (302) to wherever the bytes live.
+    await http().get(`/api/v1/media/${firstId}/file`).expect(302);
 
     const second = await http()
       .post('/api/v1/users/me/avatar')
@@ -292,9 +299,10 @@ describe('Users (e2e)', () => {
       .expect(201);
 
     expect(second.body.avatar).not.toBe(first.body.avatar);
-    // The superseded file is gone: one avatar per account, not an archive.
-    expect(await fileExists(firstPath)).toBe(false);
-    writtenFiles.push(join(process.cwd(), second.body.avatar as string));
+    // The superseded avatar is gone — row and bytes — not archived.
+    await http().get(`/api/v1/media/${firstId}`).expect(404);
+    writtenMedia.splice(writtenMedia.indexOf(firstId), 1);
+    writtenMedia.push(mediaIdOf(second.body.avatar as string));
 
     // The stored URL is what the profile reports.
     const profile = await http().get(`/api/v1/users/${aliceName}_x`).expect(200);

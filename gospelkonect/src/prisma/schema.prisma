@@ -30,6 +30,9 @@ model User {
   // RECEIVES them and the account that CAUSED them.
   notifications        Notification[]       @relation("NotificationRecipient")
   actorNotifications   Notification[]       @relation("NotificationActor")
+  // Phase 8: every blob the account uploaded — post attachments and the
+  // profile picture alike. Cascade so deleting an account takes its files.
+  media                Media[]
 }
 
 // What caused a notification. The COMMENT/REPLY/REACTION values belong to
@@ -84,11 +87,64 @@ model Post {
 
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  // Phase 8: attachment slots, ordered by PostMedia.position.
+  media  PostMedia[]
+
   // Drives GET /posts (global feed, newest first).
   @@index([createdAt(sort: Desc)])
   // Drives GET /users/:username/posts — filters by author AND orders by date
   // in one index, so an author's timeline never scans their whole history.
   @@index([authorId, createdAt(sort: Desc)])
+}
+
+// What a blob IS, for rendering and for the upload rules (one video may stand
+// alone in a post; four images may too).
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+// One uploaded blob. The BYTES live in object storage (a Composer bucket in
+// dev/prod, the local uploads directory otherwise); this table holds only the
+// metadata and the URL that points at them, which is what a post or a profile
+// actually needs.
+model Media {
+  id        String    @id @default(uuid())
+  // Who uploaded it. Cascade: deleting the account deletes its blobs too.
+  ownerId   String
+  kind      MediaKind
+  // Declared content type, kept for the file endpoint's Content-Type header.
+  mimeType  String
+  bytes     Int
+  // Storage key, e.g. media/<uuid>.jpg. Derived from the MIME type, never
+  // from the client's filename, and unique so a key can be resolved in one
+  // lookup.
+  key       String    @unique
+  createdAt DateTime  @default(now())
+
+  owner User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  posts PostMedia[]
+
+  // "My uploads, newest first" (profile media lists, admin views).
+  @@index([ownerId, createdAt(sort: Desc)])
+}
+
+// A post's attachment list. Two rows can never share a position (the order is
+// part of the response) or a (post, media) pair (a blob appears once).
+model PostMedia {
+  postId   String
+  mediaId  String
+  // 0-based slot in the post's attachment order.
+  position Int
+
+  post  Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([postId, mediaId])
+  // Enforces "position 0, 1, 2…" uniqueness per post at the database level.
+  @@unique([postId, position])
+  // Reverse lookup when a blob is deleted: is anything still attached?
+  @@index([mediaId])
 }
 
 // One row per directed follow relationship. The composite primary key makes

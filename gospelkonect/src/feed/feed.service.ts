@@ -18,6 +18,7 @@ import type { Prisma } from '@prisma/client';
 import {
   POST_ORDER_BY,
   POST_SELECT,
+  toPostResponse,
   type PostResponse,
 } from '../posts/post.constants.js';
 import { FeedCacheService } from './feed-cache.service.js';
@@ -193,7 +194,7 @@ export class FeedService {
     after?: Prisma.PostWhereInput,
   ): Promise<PostResponse[]> {
     if (take <= 0) return [];
-    return this.prisma.post.findMany({
+    const rows = await this.prisma.post.findMany({
       // A cursor narrows the same query rather than filtering in memory.
       where: after ? { AND: [where, after] } : where,
       orderBy: POST_ORDER_BY,
@@ -201,6 +202,9 @@ export class FeedService {
       take,
       select: POST_SELECT,
     });
+    // Flatten attachments here, before the cache: cached pages are then
+    // exactly the wire shape and need no rewriting on read.
+    return rows.map(toPostResponse);
   }
 
   private build(

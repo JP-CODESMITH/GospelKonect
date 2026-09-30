@@ -14,6 +14,8 @@ const row = (id: string, at: string): PostResponse =>
     createdAt: new Date(at),
     updatedAt: new Date(at),
     author: { id: `u_${id}`, name: id, username: id, avatar: null },
+    // POST_SELECT's nested attachment rows; empty for these text-only posts.
+    media: [] as never[],
   }) as PostResponse;
 
 const query = (q: Partial<FeedQueryDto>): FeedQueryDto =>
