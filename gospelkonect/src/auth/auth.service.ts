@@ -2,10 +2,12 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 // Generated model type, so SafeUser stays in sync with the schema automatically.
 import type { User } from '@prisma/client';
@@ -36,6 +38,8 @@ export class AuthService {
     private readonly tokenService: TokenService,
     // Clears the failed-login counter after a good password check.
     private readonly rateLimit: LoginRateLimitService,
+    // ADMIN_USERNAMES: who is provisioned as an administrator at login.
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -136,7 +140,50 @@ export class AuthService {
     // moment ago doesn't count against this user.
     await this.rateLimit.clear(email, ip);
 
+    await this.applyAccountPolicy(user);
+
     return this.issueSession(user);
+  }
+
+  /**
+   * Phase 9, checked at login (the guard covers calls made WITH a token; this
+   * stops a suspended account from being issued a fresh one at all):
+   *  - accounts listed in ADMIN_USERNAMES are (re)promoted to ADMIN, which is
+   *    how the first moderator of an environment is provisioned;
+   *  - a suspension refuses the login with 403 and its expiry, and an
+   *    expired suspension lifts itself here.
+   */
+  private async applyAccountPolicy(user: User): Promise<void> {
+    const declared = this.config.get<string>('admin.usernames') ?? '';
+    const wanted = declared
+      .split(',')
+      .map((name) => name.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (wanted.includes(user.username.toLowerCase()) && user.role !== 'ADMIN') {
+      await this.prisma.user.update({ where: { id: user.id }, data: { role: 'ADMIN' } });
+      user.role = 'ADMIN';
+    }
+
+    if (user.status !== 'SUSPENDED') return;
+    const until = user.suspendedUntil;
+    if (!until || until.getTime() > Date.now()) {
+      throw new HttpException(
+        {
+          message: 'This account is suspended',
+          code: 'ACCOUNT_SUSPENDED',
+          suspendedUntil: until,
+        },
+        403,
+      );
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { status: 'ACTIVE', suspendedUntil: null, suspendedReason: null },
+    });
+    user.status = 'ACTIVE';
+    user.suspendedUntil = null;
+    user.suspendedReason = null;
   }
 
   /**

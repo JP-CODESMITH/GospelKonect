@@ -4,6 +4,8 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { TokenService } from './token/token.service.js';
 import { LoginRateLimitService } from './rate-limit/rate-limit.service.js';
+import { RateLimitService } from '../security/rate-limit.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 import type { AccessTokenPayload } from './token/token.service.js';
 
 const USER_CLAIMS: AccessTokenPayload = {
@@ -38,6 +40,19 @@ describe('AuthController', () => {
         { provide: AuthService, useValue: authService },
         { provide: TokenService, useValue: {} },
         { provide: LoginRateLimitService, useValue: {} },
+        // The register route's @RateLimit guard is instantiated with the
+        // controller; its dependency only has to resolve, never be called
+        // here (these tests invoke methods, not the HTTP pipeline).
+        { provide: RateLimitService, useValue: { consume: vi.fn() } },
+        // The logout routes' AccessTokenGuard reads the account row for
+        // suspensions; these tests never reach that code path, they only need
+        // the dependency to resolve.
+        {
+          provide: PrismaService,
+          useValue: {
+            user: { findUnique: vi.fn(async () => ({ status: 'ACTIVE', suspendedUntil: null })) },
+          },
+        },
       ],
     }).compile();
 

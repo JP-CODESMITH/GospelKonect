@@ -132,6 +132,20 @@ export class MediaService {
    * it is still attached to a post — deleting it there would leave a published
    * post pointing at nothing, so the post must be edited or deleted first.
    */
+  /**
+   * Removes stored objects by key, with no ownership or attachment checks.
+   * Moderation only: by the time this runs the row (account, post) is already
+   * gone, so there is nothing left to ask permission of. Best effort — a
+   * missing object must not fail the deletion that triggered it.
+   */
+  async deleteObjects(keys: string[]): Promise<void> {
+    for (const key of keys) {
+      await this.storage.remove(key).catch((err: Error) => {
+        this.logger.debug(`object cleanup skipped for ${key}: ${err.message}`);
+      });
+    }
+  }
+
   async delete(id: string, actorId: string): Promise<void> {
     const row = await this.prisma.media.findUnique({
       where: { id },

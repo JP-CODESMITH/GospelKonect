@@ -18,6 +18,21 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Phase 9: who may moderate, and whether the account may act at all.
+  role            UserRole      @default(USER)
+  status          AccountStatus @default(ACTIVE)
+  // When a suspension ends (null = until an admin lifts it early).
+  suspendedUntil  DateTime?
+  suspendedReason String?
+
+  // Phase 9: directed blocks. `blocking` are rows where THIS user did the
+  // blocking; `blockedBy` are rows where someone else blocked THIS user.
+  blocking Block[] @relation("Blocker")
+  blockedBy Block[] @relation("Blocked")
+
+  // Phase 9: reports this user filed (as a reporter).
+  reportsFiled Report[] @relation("ReportReporter")
+
   // Social graph: a one-way edge. `following` are the edges where THIS user is
   // the follower (people they follow); `followers` are the edges where this
   // user is being followed.
@@ -151,6 +166,103 @@ model PostMedia {
   @@unique([postId, position])
   // Reverse lookup when a blob is deleted: is anything still attached?
   @@index([mediaId])
+}
+
+// Administrator rights, granted through the ADMIN_USERNAMES env var at boot or
+// at login. Ordinary accounts never gain it by registering.
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// A suspended account may still read while signed out, but every authenticated
+// call (and a fresh login) is refused until the suspension ends.
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// One directed block between two accounts. Composite key: blocking someone
+// twice is impossible, and the index serves "who blocked me".
+model Block {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+// What a report claims. The polymorphic pair (targetType, targetId) points at
+// a user, post or comment without an FK, so a target that is later deleted
+// leaves a report an admin can still read.
+enum ReportTargetType {
+  USER
+  POST
+  COMMENT
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  VIOLENCE
+  SEXUAL_CONTENT
+  MISINFORMATION
+  IMPERSONATION
+  OTHER
+}
+
+// The moderation workflow a report moves through.
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id           String           @id @default(uuid())
+  reporterId   String
+  targetType   ReportTargetType
+  targetId     String
+  // Owner of the reported row, resolved once at report time: the admin list
+  // can show "whose content" without joining three tables every time.
+  subjectUserId String?
+  reason       ReportReason
+  details      String?          @db.Text
+  status       ReportStatus     @default(PENDING)
+  resolution   String?          @db.Text
+  createdAt    DateTime         @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  reporter User @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  // The inbox an admin works through: newest open reports first.
+  @@index([status, createdAt])
+  // "Every report about this post/user".
+  @@index([targetType, targetId])
+  @@index([reporterId])
+}
+
+// Append-only audit trail of what a moderator did. Deliberately no foreign
+// keys: deleting an account must not erase the record that it was moderated.
+model ModerationAction {
+  id         String   @id @default(uuid())
+  adminId    String
+  // Dotted verb: user.suspend, user.unsuspend, user.promote, post.delete,
+  // comment.delete, report.resolve …
+  action     String
+  targetType String
+  targetId   String
+  details    String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // How someone reacted to a post. One row per (user, post): reacting again

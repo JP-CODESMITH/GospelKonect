@@ -13,9 +13,10 @@ import { PostCommentsController } from './post-comments.controller.js';
 import { CommentController } from './comment.controller.js';
 import { CommentsService } from './comments.service.js';
 import { ReactionsService } from './reactions.service.js';
+import { SecurityModule } from '../security/security.module.js';
 
 @Module({
-  imports: [AuthModule, FeedModule, NotificationsModule],
+  imports: [AuthModule, FeedModule, NotificationsModule, SecurityModule],
   controllers: [PostCommentsController, CommentController],
   providers: [CommentsService, ReactionsService],
   exports: [CommentsService, ReactionsService],

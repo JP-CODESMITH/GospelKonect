@@ -45,6 +45,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import type { AccessTokenPayload } from '../auth/token/token.service.js';
 import { MEDIA_MAX_BYTES } from './media.constants.js';
 import { MediaService, type UploadedMedia } from './media.service.js';
+import { RateLimit, RateLimitGuard } from '../security/rate-limit.guard.js';
 
 @ApiTags('media')
 @Controller('media')
@@ -57,7 +58,8 @@ export class MediaController {
    * 10 MB images, 100 MB videos — are enforced by MediaService afterwards.
    */
   @Post()
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RateLimitGuard)
+  @RateLimit({ scope: 'media', points: 60, windowSec: 60 })
   @UseInterceptors(
     FileInterceptor('file', {
       // Explicit memory storage: the buffer is what MediaService validates

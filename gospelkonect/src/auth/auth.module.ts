@@ -8,6 +8,7 @@ import { AuthService } from './auth.service.js';
 import { HashingService } from './hash/hash.service.js';
 import { TokenService } from './token/token.service.js';
 import { LoginRateLimitService } from './rate-limit/rate-limit.service.js';
+import { SecurityModule } from '../security/security.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,10 @@ import { LoginRateLimitService } from './rate-limit/rate-limit.service.js';
         secret: config.get<string>('auth.jwtSecret'),
       }),
     }),
+    // Rate limiting on register (see the controller) resolves RateLimitService
+    // from here; JwtModule's `inject` above must not mention it — that array
+    // lists tokens for the factory, not module imports.
+    SecurityModule,
   ],
   controllers: [AuthController],
   // PrismaService is no longer listed here: it now comes from the @Global

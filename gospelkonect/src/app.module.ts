@@ -15,6 +15,8 @@ import { FeedModule } from './feed/feed.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { MediaModule } from './media/media.module.js';
 import { EngagementModule } from './engagement/engagement.module.js';
+import { SecurityModule } from './security/security.module.js';
+import { ModerationModule } from './moderation/moderation.module.js';
 
 @Module({
   // AppController was previously not registered here, so GET /api/v1 answered
@@ -49,6 +51,10 @@ import { EngagementModule } from './engagement/engagement.module.js';
     MediaModule,
     // Phase 5: comments and reactions under /posts and /comments.
     EngagementModule,
+    // Phase 9: blocks, reports, the admin console. SecurityModule activates
+    // nothing on its own — it just makes the rate limiter injectable.
+    SecurityModule,
+    ModerationModule,
   ],
 })
 export class AppModule {}

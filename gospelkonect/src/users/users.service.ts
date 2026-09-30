@@ -13,6 +13,7 @@ import { MediaService } from '../media/media.service.js';
 import type { UpdateUserDto } from '../dtos/update-user.dto.js';
 import type { SearchUsersDto } from '../dtos/user-query.dto.js';
 import { paginated, type Paginated } from '../common/pagination.js';
+import { excludesBlockedUsers } from '../moderation/blocking.js';
 
 /** What a profile response returns — never includes passwordHash. */
 export interface PublicUser {
@@ -30,6 +31,8 @@ export interface UserProfile extends PublicUser {
   counts: { followers: number; following: number };
   isFollowing: boolean; // Does the viewer follow this user?
   isFollowedBy: boolean; // Does this user follow the viewer back?
+  isBlocking: boolean; // Does the viewer block this user? (Phase 9)
+  isBlockedBy: boolean; // Has this user blocked the viewer? (Phase 9)
 }
 
 /** A discovery row: profile plus the viewer's relationship to it. */
@@ -85,6 +88,10 @@ export class UsersService {
       ...this.toPublicUser(user, viewerId === user.id),
       counts,
       ...(relationship.get(user.id) ?? { isFollowing: false, isFollowedBy: false }),
+      // The profile itself stays public while a block is in force — what the
+      // block changes is interaction (follow, and the feeds on both sides) —
+      // so the UI is given both directions to render the state honestly.
+      ...(await this.blockFlags(viewerId, user.id)),
     };
   }
 
@@ -161,6 +168,8 @@ export class UsersService {
     const where: Prisma.UserWhereInput = {
       // Never surface yourself in your own discovery feed.
       ...(viewerId && { id: { not: viewerId } }),
+      // …nor anyone you are in a block with, in either direction.
+      ...(viewerId && excludesBlockedUsers(viewerId)),
       ...(term && {
         OR: [
           { username: { contains: term, mode: 'insensitive' } },
@@ -202,6 +211,30 @@ export class UsersService {
   }
 
   // --- helpers --------------------------------------------------------------
+
+  /**
+   * Both block directions between the viewer and one account, in a single
+   * lookup each (the composite key serves them directly).
+   */
+  private async blockFlags(
+    viewerId: string | undefined,
+    targetId: string,
+  ): Promise<{ isBlocking: boolean; isBlockedBy: boolean }> {
+    if (!viewerId || viewerId === targetId) {
+      return { isBlocking: false, isBlockedBy: false };
+    }
+    const [blockingThem, blockedByThem] = await Promise.all([
+      this.prisma.block.findUnique({
+        where: { blockerId_blockedId: { blockerId: viewerId, blockedId: targetId } },
+        select: { blockerId: true },
+      }),
+      this.prisma.block.findUnique({
+        where: { blockerId_blockedId: { blockerId: targetId, blockedId: viewerId } },
+        select: { blockerId: true },
+      }),
+    ]);
+    return { isBlocking: blockingThem !== null, isBlockedBy: blockedByThem !== null };
+  }
 
   /** Follower count for one user. */
   async countFollowers(userId: string): Promise<number> {
@@ -264,9 +297,14 @@ export class UsersService {
     return result;
   }
 
-  /** Hides email unless the viewer owns the profile. Already hash-free. */
+  /**
+   * Hides email unless the viewer owns the profile. Already hash-free.
+   * Takes the seven fields it reads rather than Omit<User, …>: schema columns
+   * added later (role, suspension, …) then neither leak in by accident nor
+   * force every narrowed select to declare them.
+   */
   toPublicUser(
-    user: Omit<User, 'passwordHash' | 'updatedAt'>,
+    user: Pick<User, 'id' | 'name' | 'username' | 'email' | 'avatar' | 'bio' | 'createdAt'>,
     isSelf: boolean,
   ): PublicUser {
     return {

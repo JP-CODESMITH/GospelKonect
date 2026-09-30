@@ -43,6 +43,14 @@ export default () => ({
     loginWindowSeconds: parseInt(process.env.LOGIN_WINDOW_SECONDS ?? '900', 10),
   },
 
+  // --- Phase 9: safety & moderation ---------------------------------------
+  // Comma-separated usernames that become ADMIN at boot and at login. The
+  // first administrator of an environment is provisioned here rather than by
+  // a hand-written SQL statement.
+  admin: {
+    usernames: process.env.ADMIN_USERNAMES ?? '',
+  },
+
   // --- Phase 3: avatar uploads --------------------------------------------
   upload: {
     // Directory the uploaded files land in, relative to the process cwd.

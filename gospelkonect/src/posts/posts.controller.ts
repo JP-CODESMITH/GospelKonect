@@ -33,6 +33,7 @@ import { SetReactionDto } from '../dtos/reaction.dto.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 import { PostsService } from './posts.service.js';
 import { ReactionsService } from '../engagement/reactions.service.js';
+import { RateLimit, RateLimitGuard } from '../security/rate-limit.guard.js';
 
 type ReactionState = Awaited<ReturnType<ReactionsService['set']>>;
 
@@ -55,7 +56,8 @@ export class PostsController {
    * select in PostsService, so passwordHash can't leak.
    */
   @Post()
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RateLimitGuard)
+  @RateLimit({ scope: 'posts', points: 30, windowSec: 60 })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Publish a post' })
   @ApiCreatedResponse({ description: 'Post created' })

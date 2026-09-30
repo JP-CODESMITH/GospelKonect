@@ -16,6 +16,7 @@ import { paginated, type Paginated } from '../common/pagination.js';
 import type { PaginationDto } from '../dtos/pagination.dto.js';
 import type { CreatePostDto, UpdatePostDto } from '../dtos/post.dto.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
+import { notBlockedBy } from '../moderation/blocking.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { extractMentions } from '../notifications/mentions.js';
 import { MediaService } from '../media/media.service.js';
@@ -80,9 +81,15 @@ export class PostsService {
 
   /** Global feed, newest first. */
   async list(query: PaginationDto, viewerId?: string | null): Promise<Paginated<PostResponse>> {
+    // Typed explicitly: a conditional spread inside the call leaves Prisma's
+    // generated overload unable to see the resulting where-clause shape.
+    const where: Prisma.PostWhereInput = viewerId ? notBlockedBy(viewerId) : {};
     const [total, rows] = await Promise.all([
-      this.prisma.post.count(),
+      this.prisma.post.count({ where }),
       this.prisma.post.findMany({
+        // A signed-in reader never sees posts by someone in a block with
+        // them; an anonymous one sees everything (all posts are public).
+        where,
         // New posts first: the feed's only ordering rule.
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.limit,
@@ -117,7 +124,12 @@ export class PostsService {
     // valid "this user has no posts" answer.
     if (!author) throw new NotFoundException('User not found');
 
-    const where: Prisma.PostWhereInput = { authorId: author.id };
+    const where: Prisma.PostWhereInput = {
+      authorId: author.id,
+      // Hides the timeline in both block directions; without a viewer the
+      // timeline is a plain public read.
+      ...(viewerId ? notBlockedBy(viewerId) : {}),
+    };
     const [total, rows] = await Promise.all([
       this.prisma.post.count({ where }),
       this.prisma.post.findMany({
@@ -187,6 +199,25 @@ export class PostsService {
   /** Permanently removes the caller's own post and its unshared media. */
   async remove(id: string, userId: string): Promise<void> {
     await this.requireAuthor(id, userId);
+    await this.removePost(id, userId);
+  }
+
+  /**
+   * Same removal, ownership check skipped — used by the admin console. The
+   * orphans are still cleaned against the POST'S author, because "is this
+   * blob still wanted" is a question about its owner, not about the moderator.
+   */
+  async removeAsModerator(id: string): Promise<void> {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    await this.removePost(id, post.authorId);
+  }
+
+  /** The shared deletion path: cascade, orphan cleanup, cache, notifications. */
+  private async removePost(id: string, ownerId: string): Promise<void> {
     // Snapshot the attachments before the cascade wipes the join rows, so the
     // blobs can be checked for orphans afterwards.
     const attached = await this.prisma.postMedia.findMany({
@@ -197,7 +228,7 @@ export class PostsService {
     await this.prisma.post.delete({ where: { id } });
     // Only blobs nothing else points at are removed — a media row attached to
     // another post survives, as does one the author still holds unattached.
-    await this.media.deleteOrphans(attached.map((row) => row.mediaId), userId);
+    await this.media.deleteOrphans(attached.map((row) => row.mediaId), ownerId);
     await this.feedCache.invalidate();
     // Notifications are polymorphic (not an FK), so orphan cleanup happens here.
     await this.notifications.removeForEntity('post', id);

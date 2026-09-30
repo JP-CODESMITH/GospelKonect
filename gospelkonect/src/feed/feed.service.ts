@@ -22,6 +22,7 @@ import {
   type PostResponse,
 } from '../posts/post.constants.js';
 import { loadPostMetrics } from '../posts/post-metrics.js';
+import { notBlockedBy } from '../moderation/blocking.js';
 import { FeedCacheService } from './feed-cache.service.js';
 import type { FeedQueryDto } from '../dtos/feed.dto.js';
 
@@ -163,6 +164,18 @@ export class FeedService {
 
   /** Posts by people `userId` follows, plus their own. */
   private tier0(userId: string): Prisma.PostWhereInput {
+    return { AND: [this.followedOrSelf(userId), notBlockedBy(userId)] };
+  }
+
+  /** Everything else: all posts are public, so this is the fill tier. */
+  private tier1(userId: string): Prisma.PostWhereInput {
+    // Both directions of a block are excluded here as well as in tier0 —
+    // NOT(tier0) alone would flip the exclusion back on.
+    return { AND: [{ NOT: this.followedOrSelf(userId) }, notBlockedBy(userId)] };
+  }
+
+  /** Who the feed promotes: people I follow, and me. */
+  private followedOrSelf(userId: string): Prisma.PostWhereInput {
     return {
       OR: [
         { authorId: userId },
@@ -171,11 +184,6 @@ export class FeedService {
         { author: { followers: { some: { followerId: userId } } } },
       ],
     };
-  }
-
-  /** Everything else: all posts are public, so this is the fill tier. */
-  private tier1(userId: string): Prisma.PostWhereInput {
-    return { NOT: this.tier0(userId) };
   }
 
   /** Keyset predicate matching POST_ORDER_BY (createdAt DESC, id DESC). */

@@ -27,6 +27,7 @@ import { AuthService, type AuthSession } from './auth.service.js';
 import { CreateUserDtos, LoginUserDtos, LogoutUserDtos, RefreshUserDtos } from '../dtos/authentication.dto.js';
 import { AccessTokenGuard } from './guards/access-token.guard.js';
 import { LoginRateLimitGuard } from './guards/login-rate-limit.guard.js';
+import { RateLimit, RateLimitGuard } from '../security/rate-limit.guard.js';
 import { RefreshTokenGuard } from './guards/refresh-token.guard.js';
 import { CurrentUser } from './decorators/current-user.decorator.js';
 import type { AccessTokenPayload } from './token/token.service.js';
@@ -54,6 +55,10 @@ export class AuthController {
    * /auth/login to get tokens, matching the Register → Login flow.
    */
   @Post('register')
+  // Registration is the spammer's entry point: 30 an hour per IP, and the
+  // failed-login limiter still applies on top for the password-guessing case.
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ scope: 'register', points: 30, windowSec: 3600 })
   @ApiOperation({ summary: 'Create a new account' })
   @ApiCreatedResponse({ description: 'Account created' })
   @ApiBadRequestResponse({ description: 'Validation failed' })

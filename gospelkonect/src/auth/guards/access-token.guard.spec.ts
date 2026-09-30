@@ -1,12 +1,22 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AccessTokenGuard } from './access-token.guard.js';
 import { TokenService } from '../token/token.service.js';
+import type { PrismaService } from '../../prisma/prisma.service.js';
 
 describe('AccessTokenGuard', () => {
   let guard: AccessTokenGuard;
 
   const tokenService = {
     verifyAccessToken: vi.fn(),
+  };
+
+  // Phase 9: the guard also reads the account row (suspension lives there,
+  // not in the token), so the spec stubs exactly those two operations.
+  const prisma = {
+    user: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
   };
 
   // Builds the minimal ExecutionContext a guard actually touches: only
@@ -23,7 +33,12 @@ describe('AccessTokenGuard', () => {
 
     // Built directly rather than through Nest: the guard has exactly one
     // dependency, and DI adds nothing to what this test verifies.
-    guard = new AccessTokenGuard(tokenService as unknown as TokenService);
+    guard = new AccessTokenGuard(
+      tokenService as unknown as TokenService,
+      prisma as unknown as PrismaService,
+    );
+    // Default: the account exists and is in good standing.
+    prisma.user.findUnique.mockResolvedValue({ status: 'ACTIVE', suspendedUntil: null });
     tokenService.verifyAccessToken.mockResolvedValue({
       sub: 'user_1',
       email: 'john@example.com',

@@ -129,6 +129,21 @@ export class CommentsService {
    */
   async remove(id: string, userId: string): Promise<void> {
     await this.requireAuthor(id, userId);
+    await this.deleteThread(id);
+  }
+
+  /** Content removal from the admin console: authorship is not consulted. */
+  async removeAsModerator(id: string): Promise<void> {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+    await this.deleteThread(id);
+  }
+
+  /** Cascade-delete one comment and every reply under it, then clean up. */
+  private async deleteThread(id: string): Promise<void> {
     const subtree = await this.collectSubtree(id);
     await this.prisma.comment.delete({ where: { id } });
     for (const targetId of subtree) {

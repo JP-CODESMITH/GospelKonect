@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service.js';
 import { HashingService } from './hash/hash.service.js';
 import { TokenService } from './token/token.service.js';
@@ -65,6 +66,9 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TokenService, useValue: tokens },
         { provide: LoginRateLimitService, useValue: rateLimit },
+        // ADMIN_USERNAMES lookup. Empty string = "no declared administrators",
+        // which is exactly what most of these tests want.
+        { provide: ConfigService, useValue: { get: vi.fn(() => '') } },
       ],
     }).compile();
 

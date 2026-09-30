@@ -17,5 +17,13 @@ export default defineConfig({
     // register+login chain past Vitest's 5s default.
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // The production default (30 signups an hour per IP) is a spam guard, and
+    // every suite registers its fixtures from the SAME address — dozens of
+    // accounts per run, and Redis keeps the window across runs. Test traffic
+    // opts out here; the limiter itself is covered by its unit spec and by
+    // the report throttle in moderation.e2e-spec.ts.
+    env: {
+      RATE_LIMIT_REGISTER: '1000000',
+    },
   },
 });

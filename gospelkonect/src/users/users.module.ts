@@ -7,6 +7,7 @@ import { LocalStorageService } from '../storage/local-storage.service.js';
 import { FeedModule } from '../feed/feed.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { MediaModule } from '../media/media.module.js';
+import { SecurityModule } from '../security/security.module.js';
 
 // Phase 3: profiles, the follow graph, and discovery.
 // PrismaService and ConfigService are both global, so this module only lists
@@ -19,7 +20,7 @@ import { MediaModule } from '../media/media.module.js';
   // changes whose posts belong in tier 0, so the home feed must be invalidated.
   // NotificationsModule: following someone notifies them.
   // MediaModule: avatars are ordinary Media rows now (Phase 8).
-  imports: [AuthModule, FeedModule, NotificationsModule, MediaModule],
+  imports: [AuthModule, FeedModule, NotificationsModule, MediaModule, SecurityModule],
   controllers: [UsersController],
   providers: [UsersService, FollowsService, LocalStorageService],
   // Exported so a future module (e.g. notifications) can reuse profile lookups.

@@ -39,6 +39,7 @@ import { SearchUsersDto } from '../dtos/user-query.dto.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 import { UsersService } from './users.service.js';
 import { FollowsService } from './follows.service.js';
+import { RateLimit, RateLimitGuard } from '../security/rate-limit.guard.js';
 import { AVATAR_MAX_BYTES } from '../storage/local-storage.service.js';
 import { MediaService } from '../media/media.service.js';
 
@@ -185,7 +186,8 @@ export class UsersController {
 
   /** Follows another account. Idempotent: repeating it is still 204. */
   @Post(':id/follow')
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RateLimitGuard)
+  @RateLimit({ scope: 'follows', points: 120, windowSec: 60 })
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT) // No body → 204 rather than an empty object.
   @ApiOperation({ summary: 'Follow a user' })

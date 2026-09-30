@@ -21,6 +21,7 @@ import type { AccessTokenPayload } from '../auth/token/token.service.js';
 import { CreateCommentDto } from '../dtos/comment.dto.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 import { CommentsService } from './comments.service.js';
+import { RateLimit, RateLimitGuard } from '../security/rate-limit.guard.js';
 
 type CommentResponse = Awaited<ReturnType<CommentsService['create']>>;
 type CommentPage = Awaited<ReturnType<CommentsService['list']>>;
@@ -32,7 +33,8 @@ export class PostCommentsController {
 
   /** Adds a comment (or a reply, via parentId) to a post. */
   @Post()
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, RateLimitGuard)
+  @RateLimit({ scope: 'comments', points: 60, windowSec: 60 })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Comment on a post' })
   @ApiCreatedResponse({ description: 'Comment created' })

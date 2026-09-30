@@ -7,6 +7,7 @@
 
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,13 +18,15 @@ import {
   type DiscoverUser,
 } from './users.service.js';
 import { paginated, type Paginated } from '../common/pagination.js';
+import { blockedBetween } from '../moderation/blocking.js';
 import type { PaginationDto } from '../dtos/pagination.dto.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import type { Prisma, User } from '@prisma/client';
 
-// Row as returned by findMany({ select: { follower: PUBLIC_USER_SELECT } }).
-type SelectedUser = Omit<User, 'passwordHash' | 'updatedAt'>;
+// Row as returned by findMany({ select: { follower: PUBLIC_USER_SELECT } }):
+// exactly the seven columns that select asks for.
+type SelectedUser = Pick<User, 'id' | 'name' | 'username' | 'email' | 'avatar' | 'bio' | 'createdAt'>;
 
 @Injectable()
 export class FollowsService {
@@ -55,6 +58,13 @@ export class FollowsService {
     });
     if (!target) {
       throw new NotFoundException('User not found');
+    }
+
+    // A block in either direction is a hard stop: following someone who
+    // blocked you (or whom you blocked) is exactly the interaction the block
+    // exists to prevent. Unfollowing stays allowed so either side can tidy up.
+    if (await blockedBetween(this.prisma, followerId, targetId)) {
+      throw new ForbiddenException('You cannot follow this account');
     }
 
     // Whether this call actually created the edge. The catch below swallows the
