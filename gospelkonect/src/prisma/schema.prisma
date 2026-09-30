@@ -12,8 +12,37 @@ model User {
   username     String   @unique
   email        String   @unique
   passwordHash String
+  // URL (or path) of the uploaded avatar, e.g. /uploads/avatars/<file>.
   avatar       String?
   bio          String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Social graph: a one-way edge. `following` are the edges where THIS user is
+  // the follower (people they follow); `followers` are the edges where this
+  // user is being followed.
+  following Follow[] @relation("FollowFollower")
+  followers Follow[] @relation("FollowFollowing")
+}
+
+// One row per directed follow relationship. The composite primary key makes
+// a duplicate follow impossible at the database level, so POST /users/:id/follow
+// is naturally idempotent.
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  // Who does the following (the actor).
+  follower User @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  // Who is being followed (the target).
+  following User @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  // Cascade so deleting a user removes every edge touching it, and no orphan
+  // rows remain pointing at a missing account.
+  @@id([followerId, followingId])
+  // Drives the "who follows this user" lookup (GET /users/:username/followers).
+  @@index([followingId])
+  // Drives the "who does this user follow" lookup (GET /users/:username/following).
+  @@index([followerId])
 }

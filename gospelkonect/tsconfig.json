@@ -18,6 +18,8 @@
     "skipLibCheck": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    "types": ["vitest/globals", "node"]
+    // Explicit list: only these @types packages are auto-included. `multer`
+    // must be here for the Express.Multer.File global type to resolve.
+    "types": ["vitest/globals", "node", "multer"]
   }
 }

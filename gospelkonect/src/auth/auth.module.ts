@@ -8,7 +8,6 @@ import { AuthService } from './auth.service.js';
 import { HashingService } from './hash/hash.service.js';
 import { TokenService } from './token/token.service.js';
 import { LoginRateLimitService } from './rate-limit/rate-limit.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
 
 @Module({
   imports: [
@@ -23,12 +22,12 @@ import { PrismaService } from '../prisma/prisma.service.js';
     }),
   ],
   controllers: [AuthController],
-  // NOTE (fix): PrismaService added so it can be injected into AuthService.
-  // Without this, Nest cannot resolve the new constructor dependency.
+  // PrismaService is no longer listed here: it now comes from the @Global
+  // PrismaModule imported once in AppModule, so Nest creates ONE client
+  // shared by Auth and Users instead of one pool per module.
   providers: [
     AuthService,
     HashingService,
-    PrismaService,
     TokenService,
     LoginRateLimitService,
   ],

@@ -42,4 +42,12 @@ export default () => ({
     loginMaxAttempts: parseInt(process.env.LOGIN_MAX_ATTEMPTS ?? '5', 10),
     loginWindowSeconds: parseInt(process.env.LOGIN_WINDOW_SECONDS ?? '900', 10),
   },
+
+  // --- Phase 3: avatar uploads --------------------------------------------
+  upload: {
+    // Directory the uploaded files land in, relative to the process cwd.
+    // main.ts serves it statically at the /uploads URL prefix. Read here
+    // (after dotenv) rather than at decoration time, which is too early.
+    dir: process.env.UPLOAD_DIR ?? 'uploads',
+  },
 });
