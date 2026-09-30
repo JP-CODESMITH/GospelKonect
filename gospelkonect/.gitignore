@@ -1,7 +1,14 @@
 # compiled output
 /dist
 /node_modules
-/build
+build/
+
+# Flutter / Dart (mobile/)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+**/ephemeral/
 
 # TypeScript build cache
 *.tsbuildinfo
