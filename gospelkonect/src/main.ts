@@ -6,6 +6,10 @@ import { AppModule } from './app.module.js';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Lets PrismaService and RedisService run their onModuleDestroy hooks on
+  // SIGTERM/SIGINT, so connections are closed instead of dropped.
+  app.enableShutdownHooks();
+
   app.setGlobalPrefix('api/v1');
 
   app.enableCors({
@@ -35,4 +39,10 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 
-bootstrap();
+// `void` marks the promise as intentionally un-awaited, which is what the
+// project's no-floating-promises lint rule requires. Bootstrap failures (e.g.
+// JWT_SECRET missing in production) still surface via the catch below.
+void bootstrap().catch((err: unknown) => {
+  console.error('Failed to start application:', err);
+  process.exit(1);
+});

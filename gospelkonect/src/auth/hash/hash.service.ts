@@ -22,8 +22,9 @@ export class HashingService {
   async comparePassword(plain: string, hashed: string): Promise<boolean> {
     try {
       return await argon2.verify(hashed, plain);
-    } catch (error) {
-      // Handles rare internal verification errors safely
+    } catch {
+      // argon2.verify rejects on a malformed/corrupt stored hash rather than
+      // returning false, so treat any internal failure as "not a match".
       return false;
     }
   }
