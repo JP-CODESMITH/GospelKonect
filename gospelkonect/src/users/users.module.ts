@@ -4,6 +4,7 @@ import { UsersController } from './users.controller.js';
 import { UsersService } from './users.service.js';
 import { FollowsService } from './follows.service.js';
 import { LocalStorageService } from '../storage/local-storage.service.js';
+import { FeedModule } from '../feed/feed.module.js';
 
 // Phase 3: profiles, the follow graph, and discovery.
 // PrismaService and ConfigService are both global, so this module only lists
@@ -12,7 +13,9 @@ import { LocalStorageService } from '../storage/local-storage.service.js';
   // Guards are instantiated in the module that owns the controller, so
   // AuthModule's exported TokenService must be reachable from here. Safe:
   // AuthModule imports nothing from UsersModule, so there is no cycle.
-  imports: [AuthModule],
+  // FeedModule supplies FeedCacheService: following or unfollowing someone
+  // changes whose posts belong in tier 0, so the home feed must be invalidated.
+  imports: [AuthModule, FeedModule],
   controllers: [UsersController],
   providers: [UsersService, FollowsService, LocalStorageService],
   // Exported so a future module (e.g. notifications) can reuse profile lookups.

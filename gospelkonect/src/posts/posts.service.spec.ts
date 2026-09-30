@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PostsService } from './posts.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { FeedCacheService } from '../feed/feed-cache.service.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 
 // What findUnique/create return once the POST_SELECT is applied: post scalars
@@ -30,6 +31,13 @@ describe('PostsService', () => {
   let service: PostsService;
 
   // Vitest globals are enabled in vitest.config.ts (describe/it/expect/vi).
+  // Stubbed: a write only has to bump the version, never talk to Redis here.
+  const feedCache = {
+    invalidate: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+  };
+
   const prisma = {
     post: {
       create: vi.fn(),
@@ -52,6 +60,7 @@ describe('PostsService', () => {
       providers: [
         PostsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: FeedCacheService, useValue: feedCache },
       ],
     }).compile();
 

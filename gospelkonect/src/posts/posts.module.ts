@@ -3,13 +3,18 @@ import { AuthModule } from '../auth/auth.module.js';
 import { PostsController } from './posts.controller.js';
 import { UserPostsController } from './user-posts.controller.js';
 import { PostsService } from './posts.service.js';
+import { FeedModule } from '../feed/feed.module.js';
 
 // Phase 4: the post feed, single-post reads, edits and deletes.
 // PrismaModule is @Global and ConfigModule is global, so neither is listed.
 @Module({
   // Guards resolve TokenService from AuthModule — same reason UsersModule
   // imports it. AuthModule imports nothing from here, so no cycle.
-  imports: [AuthModule],
+  // AuthModule for the guards; FeedModule for FeedCacheService, which
+  // PostsService bumps after every write (a new/edited/deleted post changes
+  // everyone's feed). FeedModule imports neither PostsModule nor UsersModule,
+  // so this cannot form a cycle.
+  imports: [AuthModule, FeedModule],
   // Two controllers on purpose: /posts/* and /users/:username/posts.
   controllers: [PostsController, UserPostsController],
   providers: [PostsService],

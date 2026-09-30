@@ -18,6 +18,7 @@ import {
 } from './users.service.js';
 import { paginated, type Paginated } from '../common/pagination.js';
 import type { PaginationDto } from '../dtos/pagination.dto.js';
+import { FeedCacheService } from '../feed/feed-cache.service.js';
 import type { Prisma, User } from '@prisma/client';
 
 // Row as returned by findMany({ select: { follower: PUBLIC_USER_SELECT } }).
@@ -30,6 +31,9 @@ export class FollowsService {
     // Reuses the profile shaping and relationship flags rather than
     // re-implementing them (they must stay identical across endpoints).
     private readonly users: UsersService,
+    // Following someone moves their posts into tier 0 of that person's home
+    // feed, so both directions must invalidate the cache.
+    private readonly feedCache: FeedCacheService,
   ) {}
 
   /**
@@ -58,6 +62,7 @@ export class FollowsService {
       // still propagates as a 500 rather than being hidden.
       if ((err as { code?: string }).code !== 'P2002') throw err;
     }
+    await this.feedCache.invalidate();
   }
 
   /** Removes the edge. Also idempotent: unfollowing twice is still 204. */
@@ -75,6 +80,7 @@ export class FollowsService {
     await this.prisma.follow.deleteMany({
       where: { followerId, followingId: targetId },
     });
+    await this.feedCache.invalidate();
   }
 
   /** Paginated list of the accounts that follow `username`, newest first. */

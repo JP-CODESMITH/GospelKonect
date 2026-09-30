@@ -15,39 +15,33 @@ import type { Prisma } from '@prisma/client';
 import { paginated, type Paginated } from '../common/pagination.js';
 import type { PaginationDto } from '../dtos/pagination.dto.js';
 import type { CreatePostDto, UpdatePostDto } from '../dtos/post.dto.js';
+import { FeedCacheService } from '../feed/feed-cache.service.js';
 
-// Author embedded in every post response — deliberately slim (no email, bio or
-// timestamps), which is all a byline needs and keeps feed payloads small.
-const AUTHOR_SELECT = {
-  id: true,
-  name: true,
-  username: true,
-  avatar: true,
-} satisfies Prisma.UserSelect;
+import {
+  POST_SELECT,
+  type PostResponse,
+} from './post.constants.js';
 
-// Explicit select rather than `include`: it guarantees the response shape
-// exactly (no authorId, no passwordHash) even if the schema grows later.
-const POST_SELECT = {
-  id: true,
-  content: true,
-  createdAt: true,
-  updatedAt: true,
-  author: { select: AUTHOR_SELECT },
-} satisfies Prisma.PostSelect;
-
-/** What every post endpoint returns. */
-export type PostResponse = Prisma.PostGetPayload<{ select: typeof POST_SELECT }>;
+// Re-exported for callers that already import it from here.
+export type { PostResponse } from './post.constants.js';
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Any write below changes every feed that could contain this post, so it
+    // is followed by a cache invalidation (FeedModule exports it).
+    private readonly feedCache: FeedCacheService,
+  ) {}
 
   /** Publishes a post as `authorId` and returns it with its author. */
   async create(authorId: string, dto: CreatePostDto): Promise<PostResponse> {
-    return this.prisma.post.create({
+    const post = await this.prisma.post.create({
       data: { authorId, content: dto.content },
       select: POST_SELECT,
     });
+    await this.feedCache.invalidate();
+    return post;
   }
 
   /** One post by id, or 404. */
@@ -104,11 +98,14 @@ export class PostsService {
     await this.requireAuthor(id, userId);
     // Prisma bumps updatedAt on any update (@updatedAt), so an edit is
     // distinguishable from the original publish time.
-    return this.prisma.post.update({
+    const updated = await this.prisma.post.update({
       where: { id },
       data: { content: dto.content },
       select: POST_SELECT,
     });
+    // Cached pages still carry the old body until the version moves.
+    await this.feedCache.invalidate();
+    return updated;
   }
 
   /** Permanently removes the caller's own post. */
@@ -117,6 +114,7 @@ export class PostsService {
     // Hard delete (Phase 4 decision). When media arrives, its files are
     // unlinked here too, in the same request.
     await this.prisma.post.delete({ where: { id } });
+    await this.feedCache.invalidate();
   }
 
   // --- helpers --------------------------------------------------------------
