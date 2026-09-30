@@ -11,6 +11,7 @@ import type { Prisma, User } from '@prisma/client';
 import { LocalStorageService } from '../storage/local-storage.service.js';
 import type { UpdateUserDto } from '../dtos/update-user.dto.js';
 import type { SearchUsersDto } from '../dtos/user-query.dto.js';
+import { paginated, type Paginated } from '../common/pagination.js';
 
 /** What a profile response returns — never includes passwordHash. */
 export interface PublicUser {
@@ -36,11 +37,8 @@ export type DiscoverUser = PublicUser & {
   isFollowedBy: boolean;
 };
 
-/** One page of results plus the metadata needed to request the next one. */
-export interface Paginated<T> {
-  items: T[];
-  meta: { page: number; limit: number; total: number; totalPages: number };
-}
+// Re-exported so followers/discovery consumers keep a single import site.
+export type { Paginated } from '../common/pagination.js';
 
 // Reused by both read and search so every profile response strips the hash in
 // exactly one place.
@@ -184,20 +182,17 @@ export class UsersService {
       rows.map((u) => u.id),
     );
 
-    return {
-      items: rows.map((u) => ({
+    return paginated(
+      rows.map((u) => ({
         ...this.toPublicUser(u, viewerId === u.id),
         // Relationship flags let the UI render a "Follow" button per row
         // without an extra request per user.
         ...(relationships.get(u.id) ?? { isFollowing: false, isFollowedBy: false }),
       })),
-      meta: {
-        page: query.page,
-        limit: query.limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / query.limit)),
-      },
-    };
+      total,
+      query.page,
+      query.limit,
+    );
   }
 
   // --- helpers --------------------------------------------------------------

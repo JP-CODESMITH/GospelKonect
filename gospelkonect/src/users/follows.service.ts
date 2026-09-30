@@ -15,9 +15,9 @@ import {
   PUBLIC_USER_SELECT,
   UsersService,
   type DiscoverUser,
-  type Paginated,
 } from './users.service.js';
-import type { PaginationDto } from '../dtos/user-query.dto.js';
+import { paginated, type Paginated } from '../common/pagination.js';
+import type { PaginationDto } from '../dtos/pagination.dto.js';
 import type { Prisma, User } from '@prisma/client';
 
 // Row as returned by findMany({ select: { follower: PUBLIC_USER_SELECT } }).
@@ -158,17 +158,14 @@ export class FollowsService {
       users.map((u) => u.id),
     );
 
-    return {
-      items: users.map((u) => ({
+    return paginated(
+      users.map((u) => ({
         ...this.users.toPublicUser(u, viewerId === u.id),
         ...(relationships.get(u.id) ?? { isFollowing: false, isFollowedBy: false }),
       })),
-      meta: {
-        page: pagination.page,
-        limit: pagination.limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
-      },
-    };
+      total,
+      pagination.page,
+      pagination.limit,
+    );
   }
 }

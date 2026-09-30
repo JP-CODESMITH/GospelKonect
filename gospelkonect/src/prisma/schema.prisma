@@ -23,6 +23,29 @@ model User {
   // user is being followed.
   following Follow[] @relation("FollowFollower")
   followers Follow[] @relation("FollowFollowing")
+  // Cascade: deleting an account takes its posts with it, so no post can be
+  // left pointing at an author that no longer exists.
+  posts     Post[]
+}
+
+// A post: text content authored by one user. Deliberately media-free for now —
+// media arrives later as a separate PostMedia table with an FK to this model,
+// which needs no change here.
+model Post {
+  id        String   @id @default(uuid())
+  // @db.Text because TEXT (255) is far too small for a post body.
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Drives GET /posts (global feed, newest first).
+  @@index([createdAt(sort: Desc)])
+  // Drives GET /users/:username/posts — filters by author AND orders by date
+  // in one index, so an author's timeline never scans their whole history.
+  @@index([authorId, createdAt(sort: Desc)])
 }
 
 // One row per directed follow relationship. The composite primary key makes
@@ -34,7 +57,7 @@ model Follow {
   createdAt   DateTime @default(now())
 
   // Who does the following (the actor).
-  follower User @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  follower  User @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
   // Who is being followed (the target).
   following User @relation("FollowFollowing", fields: [followingId], references: [id], onDelete: Cascade)
 

@@ -7,6 +7,7 @@ import envConfig from './config/env.config.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { UsersModule } from './users/users.module.js';
+import { PostsModule } from './posts/posts.module.js';
 
 @Module({
   // AppController was previously not registered here, so GET /api/v1 answered
@@ -30,6 +31,8 @@ import { UsersModule } from './users/users.module.js';
     PrismaModule,
     // Phase 3: profile reads/edits, follow graph, discovery.
     UsersModule,
+    // Phase 4: posts, feeds and post ownership.
+    PostsModule,
   ],
 })
 export class AppModule {}

@@ -35,7 +35,8 @@ import { OptionalAccessTokenGuard } from '../auth/guards/optional-access-token.g
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import type { AccessTokenPayload } from '../auth/token/token.service.js';
 import { UpdateUserDto } from '../dtos/update-user.dto.js';
-import { SearchUsersDto, PaginationDto } from '../dtos/user-query.dto.js';
+import { SearchUsersDto } from '../dtos/user-query.dto.js';
+import { PaginationDto } from '../dtos/pagination.dto.js';
 import { UsersService } from './users.service.js';
 import { FollowsService } from './follows.service.js';
 import {
