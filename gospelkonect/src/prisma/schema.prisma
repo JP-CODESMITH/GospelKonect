@@ -26,6 +26,49 @@ model User {
   // Cascade: deleting an account takes its posts with it, so no post can be
   // left pointing at an author that no longer exists.
   posts     Post[]
+  // Phase 7: notifications. Two ends of the same edge — the account that
+  // RECEIVES them and the account that CAUSED them.
+  notifications        Notification[]       @relation("NotificationRecipient")
+  actorNotifications   Notification[]       @relation("NotificationActor")
+}
+
+// What caused a notification. The COMMENT/REPLY/REACTION values belong to
+// emitters that arrive with their own phases (comments, reactions); they are
+// declared now so adding them later is a code change, not a migration that
+// has to be rolled out alongside the feature.
+enum NotificationType {
+  NEW_FOLLOWER
+  MENTION
+  COMMENT
+  REPLY
+  REACTION
+}
+
+// One row per (recipient, event). Read state is per recipient, so it lives on
+// the row rather than in a separate table — an unread badge is then a single
+// indexed count instead of a join.
+model Notification {
+  id         String           @id @default(uuid())
+  // Who it is FOR.
+  userId     String
+  // Who CAUSED it (always present for follow/mention/comment events).
+  actorId    String
+  type       NotificationType
+  // Polymorphic target: 'post' or 'comment'. Not an FK on purpose — one table
+  // points at two entity types — so cleanup on delete is handled in code.
+  entityType String?
+  entityId   String?
+  // null = unread. Set once; never cleared except by an explicit un-read.
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  user  User @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  // The inbox query: WHERE userId = ? ORDER BY createdAt DESC.
+  @@index([userId, createdAt(sort: Desc)])
+  // The unread badge: WHERE userId = ? AND readAt IS NULL.
+  @@index([userId, readAt])
 }
 
 // A post: text content authored by one user. Deliberately media-free for now —

@@ -4,6 +4,7 @@ import { PostsController } from './posts.controller.js';
 import { UserPostsController } from './user-posts.controller.js';
 import { PostsService } from './posts.service.js';
 import { FeedModule } from '../feed/feed.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 // Phase 4: the post feed, single-post reads, edits and deletes.
 // PrismaModule is @Global and ConfigModule is global, so neither is listed.
@@ -14,7 +15,8 @@ import { FeedModule } from '../feed/feed.module.js';
   // PostsService bumps after every write (a new/edited/deleted post changes
   // everyone's feed). FeedModule imports neither PostsModule nor UsersModule,
   // so this cannot form a cycle.
-  imports: [AuthModule, FeedModule],
+  // NotificationsModule: publishing a post notifies everyone it mentions.
+  imports: [AuthModule, FeedModule, NotificationsModule],
   // Two controllers on purpose: /posts/* and /users/:username/posts.
   controllers: [PostsController, UserPostsController],
   providers: [PostsService],

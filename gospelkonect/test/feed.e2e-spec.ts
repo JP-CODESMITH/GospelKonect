@@ -125,10 +125,15 @@ describe('Feed (e2e)', () => {
 
     expect(body.meta.limit).toBe(100);
     expect(body.meta.page).toBe(1);
-    expect(body.meta.total).toBe(body.items.length);
+    // The posts table is shared with every other suite (and accumulates rows
+    // across runs), so total counts everything while this page only carries
+    // `limit` of them.
+    expect(body.meta.total).toBeGreaterThanOrEqual(body.items.length);
     expect(body.meta.totalPages).toBeGreaterThanOrEqual(1);
     // A full page implies "probably more"; a short page implies "that is all".
-    expect(body.meta.nextCursor).toBe(
+    // toEqual, not toBe: vitest's toBe is reference equality and cannot carry
+    // expect.any(String).
+    expect(body.meta.nextCursor).toEqual(
       body.items.length === 100 ? expect.any(String) : null,
     );
   });

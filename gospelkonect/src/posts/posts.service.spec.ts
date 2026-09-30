@@ -3,6 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PostsService } from './posts.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { PaginationDto } from '../dtos/pagination.dto.js';
 
 // What findUnique/create return once the POST_SELECT is applied: post scalars
@@ -38,6 +39,13 @@ describe('PostsService', () => {
     set: vi.fn(),
   };
 
+  // Mentions are extracted by a pure helper; the service call is stubbed so
+  // these tests assert what was asked for, not how mentions are found.
+  const notifications = {
+    notifyMentions: vi.fn(),
+    removeForEntity: vi.fn(),
+  };
+
   const prisma = {
     post: {
       create: vi.fn(),
@@ -61,6 +69,7 @@ describe('PostsService', () => {
         PostsService,
         { provide: PrismaService, useValue: prisma },
         { provide: FeedCacheService, useValue: feedCache },
+        { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();
 
@@ -92,6 +101,23 @@ describe('PostsService', () => {
     expect(result.author.username).toBe('johndoe');
     expect(result).not.toHaveProperty('passwordHash');
     expect(result).not.toHaveProperty('authorId');
+  });
+
+  it('notifies the accounts the post mentions', async () => {
+    await service.create('user_1', { content: 'cc @mary @john' });
+
+    // Reaching the stored post id is what ties notifications to this post.
+    expect(notifications.notifyMentions).toHaveBeenCalledWith(
+      'post_1',
+      'user_1',
+      ['mary', 'john'],
+    );
+  });
+
+  it('does not emit notifications for a post with no handles', async () => {
+    await service.create('user_1', { content: 'plain' });
+
+    expect(notifications.notifyMentions).toHaveBeenCalledWith('post_1', 'user_1', []);
   });
 
   // --- getById --------------------------------------------------------------
@@ -205,6 +231,8 @@ describe('PostsService', () => {
 
     await expect(service.remove('post_1', 'user_1')).resolves.toBeUndefined();
     expect(prisma.post.delete).toHaveBeenCalledWith({ where: { id: 'post_1' } });
+    // Otherwise a deleted post leaves its mention notifications orphaned.
+    expect(notifications.removeForEntity).toHaveBeenCalledWith('post', 'post_1');
   });
 
   it("403s on deleting someone else's post", async () => {
@@ -214,6 +242,7 @@ describe('PostsService', () => {
       ForbiddenException,
     );
     expect(prisma.post.delete).not.toHaveBeenCalled();
+    expect(notifications.removeForEntity).not.toHaveBeenCalled();
   });
 
   it('404s on deleting a post that is already gone', async () => {
@@ -223,5 +252,6 @@ describe('PostsService', () => {
       NotFoundException,
     );
     expect(prisma.post.delete).not.toHaveBeenCalled();
+    expect(notifications.removeForEntity).not.toHaveBeenCalled();
   });
 });

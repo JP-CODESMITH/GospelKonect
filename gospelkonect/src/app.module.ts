@@ -9,6 +9,7 @@ import { RedisModule } from './redis/redis.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PostsModule } from './posts/posts.module.js';
 import { FeedModule } from './feed/feed.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 
 @Module({
   // AppController was previously not registered here, so GET /api/v1 answered
@@ -36,6 +37,8 @@ import { FeedModule } from './feed/feed.module.js';
     PostsModule,
     // Phase 6: the personalised home timeline.
     FeedModule,
+    // Phase 7: notification records, inbox and Redis publish.
+    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -10,16 +10,13 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service.js';
+import { redisSafe } from '../common/redis-safe.js';
 
 // One global counter, bumped on every write that affects any feed.
 const VERSION_KEY = 'feed:home:ver';
 // How long a page may be served without a recompute. Short: this is a
 // read-through cache for a hot path, not a source of truth.
 const TTL_SECONDS = 30;
-// An ioredis client configured with maxRetriesPerRequest: null queues commands
-// forever while Redis is down, so a timeout is the only way to stop a feed
-// request from hanging on a dead connection.
-const REDIS_TIMEOUT_MS = 500;
 
 @Injectable()
 export class FeedCacheService {
@@ -65,25 +62,16 @@ export class FeedCacheService {
   }
 
   /**
-   * Runs `op` with a timeout, returning `fallback` on rejection, error or
-   * timeout, and logs rather than propagating: a cache problem is never worth
-   * failing a request that could be served from Postgres.
+   * Runs `op` with the shared Redis timeout, returning `fallback` and logging
+   * rather than propagating: a cache problem is never worth failing a request
+   * that could be served from Postgres.
    */
-  private async safe<T>(op: () => Promise<T>, fallback: T): Promise<T> {
-    let timer: NodeJS.Timeout | undefined;
-    try {
-      return await Promise.race([
-        op(),
-        new Promise<never>((_resolve, reject) => {
-          timer = setTimeout(() => reject(new Error('redis timeout')), REDIS_TIMEOUT_MS);
-        }),
-      ]);
-    } catch (err) {
-      this.logger.warn(`feed cache skipped: ${(err as Error).message}`);
-      return fallback;
-    } finally {
-      // Without this the timeout timer would keep the event loop alive.
-      clearTimeout(timer);
-    }
+  private safe<T>(op: () => Promise<T>, fallback: T): Promise<T> {
+    // Logged only when the operation actually failed — inferring failure from
+    // the returned value would warn on every successful set() (which resolves
+    // to undefined, the same value used as the fallback).
+    return redisSafe(op, fallback, (err) =>
+      this.logger.warn(`feed cache skipped: ${err.message}`),
+    );
   }
 }

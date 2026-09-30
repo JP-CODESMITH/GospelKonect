@@ -16,6 +16,8 @@ import { paginated, type Paginated } from '../common/pagination.js';
 import type { PaginationDto } from '../dtos/pagination.dto.js';
 import type { CreatePostDto, UpdatePostDto } from '../dtos/post.dto.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { extractMentions } from '../notifications/mentions.js';
 
 import {
   POST_SELECT,
@@ -32,6 +34,8 @@ export class PostsService {
     // Any write below changes every feed that could contain this post, so it
     // is followed by a cache invalidation (FeedModule exports it).
     private readonly feedCache: FeedCacheService,
+    // Mentions in the body become notifications once the post exists.
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Publishes a post as `authorId` and returns it with its author. */
@@ -41,6 +45,8 @@ export class PostsService {
       select: POST_SELECT,
     });
     await this.feedCache.invalidate();
+    // Typo'd handles resolve to nothing, so a mention can never fail a publish.
+    await this.notifications.notifyMentions(post.id, authorId, extractMentions(dto.content));
     return post;
   }
 
@@ -115,6 +121,8 @@ export class PostsService {
     // unlinked here too, in the same request.
     await this.prisma.post.delete({ where: { id } });
     await this.feedCache.invalidate();
+    // Notifications are polymorphic (not an FK), so orphan cleanup happens here.
+    await this.notifications.removeForEntity('post', id);
   }
 
   // --- helpers --------------------------------------------------------------

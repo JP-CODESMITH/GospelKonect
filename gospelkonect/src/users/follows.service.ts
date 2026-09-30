@@ -19,6 +19,7 @@ import {
 import { paginated, type Paginated } from '../common/pagination.js';
 import type { PaginationDto } from '../dtos/pagination.dto.js';
 import { FeedCacheService } from '../feed/feed-cache.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { Prisma, User } from '@prisma/client';
 
 // Row as returned by findMany({ select: { follower: PUBLIC_USER_SELECT } }).
@@ -34,6 +35,8 @@ export class FollowsService {
     // Following someone moves their posts into tier 0 of that person's home
     // feed, so both directions must invalidate the cache.
     private readonly feedCache: FeedCacheService,
+    // "Sarah followed you" is the one notification this graph can emit today.
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -54,8 +57,13 @@ export class FollowsService {
       throw new NotFoundException('User not found');
     }
 
+    // Whether this call actually created the edge. The catch below swallows the
+    // duplicate, so without a flag a repeated follow would fall through to the
+    // notification and tell the same person twice.
+    let inserted = false;
     try {
       await this.prisma.follow.create({ data: { followerId, followingId: targetId } });
+      inserted = true;
     } catch (err) {
       // P2002 = the edge already exists. Swallowed so the call stays idempotent;
       // every other failure (e.g. the target was deleted a millisecond ago)
@@ -63,6 +71,13 @@ export class FollowsService {
       if ((err as { code?: string }).code !== 'P2002') throw err;
     }
     await this.feedCache.invalidate();
+    if (inserted) {
+      await this.notifications.notify({
+        userId: targetId,
+        actorId: followerId,
+        type: 'NEW_FOLLOWER',
+      });
+    }
   }
 
   /** Removes the edge. Also idempotent: unfollowing twice is still 204. */
