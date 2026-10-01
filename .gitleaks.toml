@@ -1,0 +1,23 @@
+# Gitleaks configuration for this repository.
+#
+# Gitleaks auto-loads `.gitleaks.toml` from the directory it runs in, so
+# `gitleaks detect` picks this up when started here or at the repo root
+# (both copies are identical on purpose); `--config <path>` works anywhere.
+#
+# The default rules are kept in full; this file only subtracts the two
+# strings below, both of which are deliberately fake: a test asserts that a
+# WRONG password is refused, and the README shows a placeholder token in a
+# curl example. Every other rule still fires, so a real credential landing
+# in history (test or docs included) is still reported.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholder credentials that only ever exist to be wrong"
+regexes = [
+    # test/auth.e2e-spec.ts — the wrong password a login test asserts on
+    '''definitely-wrong-1''',
+    # README.md — placeholder value in a token= query-parameter example
+    '''abc123def456''',
+]
