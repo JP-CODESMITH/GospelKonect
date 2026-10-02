@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   flutter_native_splash: ^2.4.8
+  smooth_page_indicator: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +62,14 @@ flutter:
 
   assets:
     - assets/images/
+
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

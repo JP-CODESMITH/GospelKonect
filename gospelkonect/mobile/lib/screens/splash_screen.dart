@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
+import '../theme/app_colors.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -11,8 +13,6 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   static const _logoAsset = 'assets/images/gospelkonect_app_logo.png';
-  static const _navy = Color(0xFF29384D);
-  static const _amber = Color(0xFFD48A1E);
 
   late final AnimationController _controller;
   late final CurvedAnimation _fade;
@@ -28,12 +28,12 @@ class _SplashScreenState extends State<SplashScreen>
     )..forward();
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
 
-    Future.delayed(const Duration(milliseconds: 2600), _goHome);
+    Future.delayed(const Duration(milliseconds: 2600), _goToOnboarding);
   }
 
-  void _goHome() {
+  void _goToOnboarding() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/home');
+    Navigator.of(context).pushReplacementNamed('/onboarding');
   }
 
   @override
@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surfacePureWhite,
       body: Center(
         child: FadeTransition(
           opacity: _fade,
@@ -56,22 +56,19 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 Image.asset(_logoAsset, width: 160),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'GospelKonect',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: _navy,
-                    letterSpacing: 1.2,
-                  ),
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        color: AppColors.neutralDark,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 Container(
                   height: 3,
                   width: 60,
-                  decoration: BoxDecoration(
-                    color: _amber,
-                    borderRadius: BorderRadius.circular(2),
+                  decoration: const BoxDecoration(
+                    color: AppColors.sunGold,
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
                   ),
                 ),
               ],
