@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "GospelKonect",
+    "slug": "gospelkonect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/gospelkonect_app_logo.png",
+    "scheme": "gospelkonect",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/gospelkonect_app_logo.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/images/gospelkonect_app_logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/gospelkonect_app_logo.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
