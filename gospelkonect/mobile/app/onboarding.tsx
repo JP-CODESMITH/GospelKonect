@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  Image,
   ImageBackground,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dots } from '../components/Dots';
-import { AppColors, Fonts, LogoAsset, Shadows, TokenColors, TypeScale } from '../constants/theme';
+import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../constants/theme';
 
 const OnboardingBackground = require('../assets/images/GospelKonect Community Splash Screen.png');
 
@@ -61,6 +61,11 @@ export default function Onboarding() {
       resizeMode="cover"
       accessibilityLabel="GospelKonect community gathering"
     >
+      <StatusBar
+        backgroundColor={TokenColors.surfaceContainerHigh}
+        barStyle="dark-content"
+        translucent={false}
+      />
       <LinearGradient
         colors={['rgba(10,15,25,0)', 'rgba(10,15,25,0.62)']}
         locations={[0, 1]}
@@ -73,29 +78,6 @@ export default function Onboarding() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <View style={styles.logoChip}>
-                <Image source={LogoAsset} style={styles.logo} accessibilityLabel="GospelKonect logo" />
-              </View>
-              <Text style={styles.brand}>GospelKonect</Text>
-            </View>
-            <Pressable
-              onPress={() => router.replace('/login')}
-              accessibilityRole="button"
-              accessibilityLabel="Skip onboarding"
-              hitSlop={8}
-              style={styles.skip}
-            >
-              <Text style={styles.skipLabel}>Skip</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.titleBlock}>
-            <Text style={styles.title}>{page.title}</Text>
-            <Text style={styles.desc}>{page.description}</Text>
-          </View>
-
           <View style={styles.spacer} />
 
           <View style={styles.dotsWrap}>
@@ -296,10 +278,9 @@ const styles = StyleSheet.create({
   },
   socialRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8, gap: 12 },
   socialBtn: {
-    flex: 1,
+    width: 52,
     height: 52,
-    minHeight: 48,
-    borderRadius: 16,
+    borderRadius: 9999,
     backgroundColor: TokenColors.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: TokenColors.outlineVariant,

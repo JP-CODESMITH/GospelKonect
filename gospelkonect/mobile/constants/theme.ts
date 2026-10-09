@@ -133,4 +133,4 @@ export const Shadows = {
   },
 } as const;
 
-export const LogoAsset = require('../assets/images/gospelkonect_app_logo.png');
+export const LogoAsset = require('../assets/images/GospelKonect_G_logo_transparent.png');
