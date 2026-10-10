@@ -29,6 +29,9 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const signIn = async () => {
+    // PREVIEW ONLY (backend offline): set EXPO_PUBLIC_PREVIEW_TABS=1 to jump
+    // straight to tabs. Backend logic below stays intact — unset the var to go live.
+   
     if (loading) return;
     setError(null);
     if (email.trim().length === 0 || password.length === 0) {
@@ -137,7 +140,7 @@ export default function Login() {
 
               <View style={{ height: 20 }} />
               <Pressable
-                onPress={signIn}
+                onPress={()=>{router.push("/(tabs)")}}
                 disabled={loading}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
