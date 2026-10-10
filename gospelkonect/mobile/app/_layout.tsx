@@ -35,24 +35,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
-        <Stack.Screen
-          name="login"
-          options={{
-            headerShown: true,
-            title: 'Sign In',
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: TokenColors.surface },
-          }}
-        />
-        <Stack.Screen
-          name="register"
-          options={{
-            headerShown: true,
-            title: 'Create Account',
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: TokenColors.surface },
-          }}
-        />
+        <Stack.Screen name="(auth)" />
         <Stack.Screen name="home" />
       </Stack>
     </>
