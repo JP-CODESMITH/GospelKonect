@@ -14,17 +14,44 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
+import { ApiError, loginUser } from '../../lib/api';
+import { saveSession } from '../../lib/session';
 
 const OnboardingBackground = require('../../assets/images/GospelKonect Community Splash Screen.png');
 
-/** Sign in — mock nav to /home, parity with Flutter login_screen. */
+/** Sign in against the NestJS backend, session persisted to secure storage. */
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const signIn = () => router.replace('/home');
+  const signIn = async () => {
+    if (loading) return;
+    setError(null);
+    if (email.trim().length === 0 || password.length === 0) {
+      setError('Enter your email and password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const session = await loginUser(email, password);
+      await saveSession(session.accessToken, session.refreshToken);
+      router.replace('/home');
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 401
+          ? 'Incorrect email or password.'
+          : err instanceof Error
+            ? err.message
+            : 'Sign in failed. Try again.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const inputStyle = (key: string) => [
     styles.input,
@@ -56,9 +83,9 @@ export default function Login() {
             bounces={false}
           >
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => router.replace('/onboarding')}
               accessibilityRole="button"
-              accessibilityLabel="Go back"
+              accessibilityLabel="Back to onboarding"
               hitSlop={8}
               style={({ pressed }) => [styles.back, pressed && styles.pressed]}
             >
@@ -70,6 +97,11 @@ export default function Login() {
             <View style={styles.card}>
               <Text style={styles.title}>Welcome back</Text>
               <Text style={styles.sub}>Sign in to continue</Text>
+              {error ? (
+                <Text style={styles.error} accessibilityRole="alert">
+                  {error}
+                </Text>
+              ) : null}
 
               <Text style={styles.label}>Email</Text>
               <TextInput
@@ -106,12 +138,18 @@ export default function Login() {
               <View style={{ height: 20 }} />
               <Pressable
                 onPress={signIn}
+                disabled={loading}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
+                accessibilityState={{ disabled: loading, busy: loading }}
                 hitSlop={4}
-                style={({ pressed }) => [styles.createBtn, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.createBtn,
+                  pressed && !loading && styles.pressed,
+                  loading && styles.disabled,
+                ]}
               >
-                <Text style={styles.createLabel}>Sign In</Text>
+                <Text style={styles.createLabel}>{loading ? 'Signing In…' : 'Sign In'}</Text>
               </Pressable>
 
               <View style={styles.orRow}>
@@ -122,7 +160,7 @@ export default function Login() {
 
               <View style={styles.socialRow}>
                 <Pressable
-                  onPress={signIn}
+                  onPress={() => setError('Google sign-in is not available yet.')}
                   accessibilityRole="button"
                   accessibilityLabel="Continue with Google"
                   hitSlop={4}
@@ -131,7 +169,7 @@ export default function Login() {
                   <Text style={styles.socialG}>G</Text>
                 </Pressable>
                 <Pressable
-                  onPress={signIn}
+                  onPress={() => setError('Apple sign-in is not available yet.')}
                   accessibilityRole="button"
                   accessibilityLabel="Continue with Apple"
                   hitSlop={4}
@@ -184,6 +222,19 @@ const styles = StyleSheet.create({
     color: TokenColors.onSurfaceVariant,
   },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  disabled: { opacity: 0.6 },
+  error: {
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodySm.fontSize,
+    lineHeight: TypeScale.bodySm.lineHeight,
+    color: TokenColors.error,
+    backgroundColor: TokenColors.errorContainer,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 12,
+    textAlign: 'center',
+  },
   card: {
     width: '100%',
     backgroundColor: TokenColors.surfaceContainerLowest,

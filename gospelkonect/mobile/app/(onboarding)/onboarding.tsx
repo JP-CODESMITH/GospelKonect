@@ -11,10 +11,10 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Dots } from '../components/Dots';
-import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../constants/theme';
+import { Dots } from '../../components/Dots';
+import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
 
-const OnboardingBackground = require('../assets/images/GospelKonect Community Splash Screen.png');
+const OnboardingBackground = require('../../assets/images/GospelKonect Community Splash Screen.png');
 
 const PAGES = [
   {

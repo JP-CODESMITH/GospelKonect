@@ -14,18 +14,60 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
+import { ApiError, loginUser, registerUser, usernameFromName } from '../../lib/api';
+import { saveSession } from '../../lib/session';
 
 const OnboardingBackground = require('../../assets/images/GospelKonect Community Splash Screen.png');
 
-/** Create account — mock nav to /home, parity with Flutter registration_screen. */
+/** Create account against the NestJS backend, then sign straight in. */
 export default function Register() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const createAccount = () => router.replace('/home');
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/login');
+  };
+
+  const createAccount = async () => {
+    if (loading) return;
+    setError(null);
+    if (name.trim().length === 0) {
+      setError('Enter your full name.');
+      return;
+    }
+    if (email.trim().length === 0) {
+      setError('Enter your email address.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const username = usernameFromName(name.trim(), email.trim());
+      await registerUser(username, email, password);
+      const session = await loginUser(email, password);
+      await saveSession(session.accessToken, session.refreshToken);
+      router.replace('/home');
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 409
+          ? 'That email or username is already in use.'
+          : err instanceof Error
+            ? err.message
+            : 'Could not create your account. Try again.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const inputStyle = (key: string) => [
     styles.input,
@@ -57,7 +99,7 @@ export default function Register() {
             bounces={false}
           >
             <Pressable
-              onPress={() => router.back()}
+              onPress={goBack}
               accessibilityRole="button"
               accessibilityLabel="Go back"
               hitSlop={8}
@@ -71,6 +113,11 @@ export default function Register() {
             <View style={styles.card}>
               <Text style={styles.title}>Join GospelKonect</Text>
               <Text style={styles.sub}>Create your account to get started</Text>
+              {error ? (
+                <Text style={styles.error} accessibilityRole="alert">
+                  {error}
+                </Text>
+              ) : null}
 
               <Text style={styles.label}>Full name</Text>
               <TextInput
@@ -121,12 +168,18 @@ export default function Register() {
               <View style={{ height: 20 }} />
               <Pressable
                 onPress={createAccount}
+                disabled={loading}
                 accessibilityRole="button"
                 accessibilityLabel="Create account"
+                accessibilityState={{ disabled: loading, busy: loading }}
                 hitSlop={4}
-                style={({ pressed }) => [styles.createBtn, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.createBtn,
+                  pressed && !loading && styles.pressed,
+                  loading && styles.disabled,
+                ]}
               >
-                <Text style={styles.createLabel}>Create Account</Text>
+                <Text style={styles.createLabel}>{loading ? 'Creating…' : 'Create Account'}</Text>
               </Pressable>
 
               <View style={styles.orRow}>
@@ -137,7 +190,7 @@ export default function Register() {
 
               <View style={styles.socialRow}>
                 <Pressable
-                  onPress={createAccount}
+                  onPress={() => setError('Google sign-in is not available yet.')}
                   accessibilityRole="button"
                   accessibilityLabel="Continue with Google"
                   hitSlop={4}
@@ -146,7 +199,7 @@ export default function Register() {
                   <Text style={styles.socialG}>G</Text>
                 </Pressable>
                 <Pressable
-                  onPress={createAccount}
+                  onPress={() => setError('Apple sign-in is not available yet.')}
                   accessibilityRole="button"
                   accessibilityLabel="Continue with Apple"
                   hitSlop={4}
@@ -159,7 +212,7 @@ export default function Register() {
               <View style={styles.switchRow}>
                 <Text style={styles.switchText}>Already have an account?</Text>
                 <Pressable
-                  onPress={() => router.back()}
+                  onPress={() => router.replace('/login')}
                   accessibilityRole="button"
                   accessibilityLabel="Back to sign in"
                   hitSlop={8}
@@ -199,6 +252,19 @@ const styles = StyleSheet.create({
     color: TokenColors.onSurfaceVariant,
   },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  disabled: { opacity: 0.6 },
+  error: {
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodySm.fontSize,
+    lineHeight: TypeScale.bodySm.lineHeight,
+    color: TokenColors.error,
+    backgroundColor: TokenColors.errorContainer,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 12,
+    textAlign: 'center',
+  },
   card: {
     width: '100%',
     backgroundColor: TokenColors.surfaceContainerLowest,
