@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Placeholder feed — static mock data, no backend wiring yet.
 const POSTS = [
@@ -33,6 +34,12 @@ const POSTS = [
 export default function Feeds() {
   return (
     <SafeAreaView style={styles.root}>
+       <LinearGradient
+              colors={['rgb(0, 5, 15)', 'rgb(52, 78, 131)']}
+              locations={[0, 1]}
+              style={styles.scrim}
+              pointerEvents="none"
+            />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Feeds</Text>
         <Text style={styles.sub}>Latest from your circles</Text>
@@ -114,4 +121,6 @@ const styles = StyleSheet.create({
     color: TokenColors.onSurfaceVariant,
     marginTop: 10,
   },
+    scrim: { position: 'absolute', left: 0, right: 0, top: 0, height: '100%' }
+
 });
