@@ -1,7 +1,12 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 // Placeholder feed — static mock data, no backend wiring yet.
 const POSTS = [
@@ -31,17 +36,47 @@ const POSTS = [
   },
 ];
 
+function GlassIconButton({
+  name,
+  label,
+  onPress,
+}: {
+  name: IconName;
+  label: string;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={8}
+      onPress={onPress}
+      style={({ pressed }) => [styles.iconPressable, pressed && styles.iconPressed]}
+    >
+      <View style={styles.iconButton}>
+        <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
+        <Ionicons name={name} size={20} color={TokenColors.onSurface} />
+      </View>
+    </Pressable>
+  );
+}
+
 export default function Feeds() {
   return (
     <SafeAreaView style={styles.root}>
-       <LinearGradient
-              colors={['rgb(0, 5, 15)', 'rgb(52, 78, 131)']}
-              locations={[0, 1]}
-              style={styles.scrim}
-              pointerEvents="none"
-            />
+      <StatusBar backgroundColor={AppColors.feedGradientStart} />
+      <LinearGradient
+        colors={[AppColors.feedGradientStart, AppColors.feedGradientEnd]}
+        locations={[0, 1]}
+        style={styles.scrim}
+        pointerEvents="none"
+      />
+      <View style={styles.topBar}>
+        <GlassIconButton name="search-outline" label="Search feeds" />
+        <Text style={styles.topTitle}>Feeds</Text>
+        <GlassIconButton name="settings-outline" label="Feed settings" />
+      </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Feeds</Text>
         <Text style={styles.sub}>Latest from your circles</Text>
         {POSTS.map((post) => (
           <View key={post.id} style={styles.card}>
@@ -67,14 +102,41 @@ export default function Feeds() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: TokenColors.surface },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 120 },
-  title: {
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+    zIndex: 1,
+  },
+  topTitle: {
+    flex: 1,
+    textAlign: 'center',
     fontFamily: Fonts.display,
-    fontSize: TypeScale.headlineLg.fontSize,
-    lineHeight: TypeScale.headlineLg.lineHeight,
-    fontWeight: '800',
+    fontSize: TypeScale.headlineMd.fontSize,
+    lineHeight: TypeScale.headlineMd.lineHeight,
+    fontWeight: '600',
     color: TokenColors.onSurface,
   },
+  iconPressable: {
+    width: 44,
+    height: 44,
+    borderRadius: 9999,
+  },
+  iconPressed: { opacity: 0.7 },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 9999,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: AppColors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 120 },
   sub: {
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodyMd.fontSize,
@@ -121,6 +183,5 @@ const styles = StyleSheet.create({
     color: TokenColors.onSurfaceVariant,
     marginTop: 10,
   },
-    scrim: { position: 'absolute', left: 0, right: 0, top: 0, height: '100%' }
-
+  scrim: { position: 'absolute', left: 0, right: 0, top: 0, height: '100%' },
 });

@@ -2,15 +2,15 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import type { ComponentProps } from 'react';
-import { StyleSheet,type ColorValue } from 'react-native';
-import { AppColors, Shadows, TokenColors } from '../../constants/theme';
+import { StyleSheet, type ColorValue } from 'react-native';
+import { AppColors, Radii, Shadows, TokenColors } from '../../constants/theme';
 
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 function icon(name: IconName, outline: IconName) {
   return ({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? name : outline} size={size} color={color} />
+    <Ionicons name={focused ? name : outline} size={24} color={color} />
   );
 }
 
@@ -25,11 +25,19 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
+        tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: TokenColors.primary,
-        tabBarInactiveTintColor: "black",
+        tabBarInactiveTintColor: AppColors.neutralMuted,
         tabBarStyle: styles.bar,
         tabBarItemStyle: styles.item,
-        tabBarBackground: () => <BlurView intensity={90} style={styles.glass} />,
+        tabBarBackground: () => (
+          <BlurView
+            intensity={80}
+            tint="light"
+            experimentalBlurMethod="dimezisBlurView"
+            style={styles.glass}
+          />
+        ),
       }}
     >
       <Tabs.Screen
@@ -56,24 +64,30 @@ const styles = StyleSheet.create({
   bar: {
     position: 'absolute',
     width: '80%',
-    marginLeft:'10%',
+    left: '10%',
+    right: '10%',
+    marginLeft: '10%',
+    bottom: 24,
+    height: 61,
+    flexDirection: 'row',
     overflow: 'hidden',
-    left: 20,
-    right: 20,
-    bottom: 30,
-    borderRadius: 28,
+    borderRadius: Radii.hero,
     backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
     borderTopWidth: 0,
     borderWidth: 1,
     borderColor: AppColors.borderSubtle,
+    paddingHorizontal: 12,
     ...Shadows.sheet,
   },
-  item: { padding: 4 },
+  item: {
+    flex: 1,
+    paddingVertical: 10,
+    minHeight: 44,
+  },
   glass: {
-    // borderRadius: 28,
+    flex: 1,
     overflow: 'hidden',
-    // backgroundColor: 'rgba(249,249,255,0.85)',
+    borderRadius: Radii.hero,
+    backgroundColor: AppColors.tabBarGlass,
   },
 });

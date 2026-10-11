@@ -72,6 +72,9 @@ export const AppColors = {
   prayerBadgeSurface: '#ECFDF5',
   prayerBadgeBorder: '#D1FAE5',
   prayerBadgeText: '#047857',
+  feedGradientStart: '#7EA8CC',
+  feedGradientEnd: '#D9D9D9',
+  tabBarGlass: 'rgba(249,249,255,0.85)',
 } as const;
 
 export const Radii = {
