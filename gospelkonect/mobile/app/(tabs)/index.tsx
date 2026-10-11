@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -5,11 +6,24 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { PostComposerCard, type ComposerPreset } from '../../components/PostComposerCard';
+import { CreatePostSheet, type NewPost } from '../../components/CreatePostSheet';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
+type Post = {
+  id: string;
+  name: string;
+  time: string;
+  text: string;
+  likes: number;
+  comments: number;
+  tag?: Exclude<ComposerPreset, 'none' | 'photo'>;
+  scripture?: string;
+};
+
 // Placeholder feed — static mock data, no backend wiring yet.
-const POSTS = [
+const SEED_POSTS: Post[] = [
   {
     id: '1',
     name: 'Grace M.',
@@ -17,6 +31,8 @@ const POSTS = [
     text: 'Morning devotion: “Be still, and know that I am God.” — Psalm 46:10. Sitting with this today.',
     likes: 24,
     comments: 6,
+    tag: 'scripture',
+    scripture: 'Psalm 46:10',
   },
   {
     id: '2',
@@ -25,6 +41,7 @@ const POSTS = [
     text: 'Join us tonight at 7pm for the weekly prayer chain. All are welcome — bring a friend.',
     likes: 41,
     comments: 12,
+    tag: 'prayer',
   },
   {
     id: '3',
@@ -62,6 +79,32 @@ function GlassIconButton({
 }
 
 export default function Feeds() {
+  const [posts, setPosts] = useState<Post[]>(SEED_POSTS);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [preset, setPreset] = useState<ComposerPreset>('none');
+
+  const openComposer = (p: ComposerPreset) => {
+    setPreset(p);
+    setSheetVisible(true);
+  };
+
+  const submitPost = (draft: NewPost) => {
+    setPosts((prev) => [
+      {
+        id: `local-${Date.now()}`,
+        name: 'You',
+        time: 'Just now',
+        text: draft.text,
+        likes: 0,
+        comments: 0,
+        tag: draft.preset === 'scripture' || draft.preset === 'prayer' ? draft.preset : undefined,
+        scripture: draft.scripture,
+      },
+      ...prev,
+    ]);
+    setSheetVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar backgroundColor={AppColors.feedGradientStart} />
@@ -77,25 +120,43 @@ export default function Feeds() {
         <GlassIconButton name="settings-outline" label="Feed settings" />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <PostComposerCard onTap={openComposer} />
         <Text style={styles.sub}>Latest from your circles</Text>
-        {POSTS.map((post) => (
+        {posts.map((post) => (
           <View key={post.id} style={styles.card}>
             <View style={styles.row}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{post.name.charAt(0)}</Text>
               </View>
-              <View>
+              <View style={styles.authorCol}>
                 <Text style={styles.name}>{post.name}</Text>
                 <Text style={styles.time}>{post.time}</Text>
               </View>
+              {post.tag === 'prayer' && (
+                <View style={styles.prayerBadge}>
+                  <Ionicons name="heart-outline" size={14} color={AppColors.prayerBadgeText} />
+                  <Text style={styles.prayerText}>Prayer</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.body}>{post.text}</Text>
+            {post.tag === 'scripture' && (
+              <View style={styles.verseCallout}>
+                <Text style={styles.verseText}>{post.scripture ?? 'Scripture'}</Text>
+              </View>
+            )}
             <Text style={styles.meta}>
               {post.likes} likes · {post.comments} comments
             </Text>
           </View>
         ))}
       </ScrollView>
+      <CreatePostSheet
+        visible={sheetVisible}
+        preset={preset}
+        onClose={() => setSheetVisible(false)}
+        onSubmit={submitPost}
+      />
     </SafeAreaView>
   );
 }
@@ -136,12 +197,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 120 },
+  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 120 },
   sub: {
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodyMd.fontSize,
     color: TokenColors.onSurfaceVariant,
-    marginTop: 4,
+    marginTop: 12,
     marginBottom: 16,
   },
   card: {
@@ -154,6 +215,7 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  authorCol: { flex: 1 },
   avatar: {
     width: 40,
     height: 40,
@@ -171,10 +233,43 @@ const styles = StyleSheet.create({
   },
   name: { fontFamily: Fonts.display, fontSize: 15, fontWeight: '600', color: TokenColors.onSurface },
   time: { fontFamily: Fonts.body, fontSize: 12, color: TokenColors.outline },
+  prayerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.prayerBadgeSurface,
+    borderWidth: 1,
+    borderColor: AppColors.prayerBadgeBorder,
+    borderRadius: 9999,
+    paddingHorizontal: 10,
+    minHeight: 32,
+  },
+  prayerText: {
+    fontFamily: Fonts.display,
+    fontSize: TypeScale.labelMd.fontSize,
+    fontWeight: '600',
+    color: AppColors.prayerBadgeText,
+    marginLeft: 4,
+  },
   body: {
     fontFamily: Fonts.body,
     fontSize: TypeScale.bodyMd.fontSize,
     lineHeight: TypeScale.bodyMd.lineHeight,
+    color: TokenColors.onSurface,
+  },
+  verseCallout: {
+    marginTop: 10,
+    backgroundColor: AppColors.surfaceAlabaster,
+    borderWidth: 1,
+    borderColor: AppColors.borderSubtle,
+    borderLeftWidth: 3,
+    borderLeftColor: AppColors.sunGold,
+    borderRadius: 8,
+    padding: 12,
+  },
+  verseText: {
+    fontFamily: Fonts.body,
+    fontStyle: 'italic',
+    fontSize: TypeScale.bodyMd.fontSize,
     color: TokenColors.onSurface,
   },
   meta: {
