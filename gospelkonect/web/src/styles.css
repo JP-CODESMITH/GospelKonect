@@ -1,8 +1,43 @@
-
 @import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-cerulean: #1e3a8a;
+  --color-cerulean-deep: #00236f;
+  --color-cerulean-ink: #00164e;
+  --color-sungold: #d97706;
+  --color-sungold-soft: #fe932c;
+  --color-sungold-deep: #663500;
+  --color-olive: #4d7c0f;
+  --color-rose: #e11d48;
+  --color-ink: #1e293b;
+  --color-muted: #64748b;
+  --color-faint: #94a3b8;
+  --color-line: #e2e8f0;
+  --color-alabaster: #f8fafc;
+  --color-sunken: #f1f5f9;
+  --color-prayer-bg: #ecfdf5;
+  --color-prayer-line: #d1fae5;
+  --color-prayer-ink: #047857;
+  --color-lavender: #e7eeff;
+  --color-lavender-soft: #f0f3ff;
+
+  --shadow-card: 0 2px 8px -2px rgb(30 41 59 / 0.04), 0 1px 4px -1px rgb(30 41 59 / 0.02);
+  --shadow-sheet: 0 10px 25px -5px rgb(30 41 59 / 0.08), 0 8px 10px -6px rgb(30 41 59 / 0.04);
+  --shadow-warm: 0 12px 24px -4px rgb(30 58 138 / 0.22);
+
+  --radius-card: 16px;
+  --radius-hero: 28px;
+}
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -13,5 +48,53 @@ body,
 
 body {
   margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-alabaster);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: #1e3a8a;
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid #1e3a8a;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.marquee-track {
+  animation: marquee 42s linear infinite;
+}
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
