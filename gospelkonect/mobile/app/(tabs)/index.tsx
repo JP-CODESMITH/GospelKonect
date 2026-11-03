@@ -257,7 +257,9 @@ export default function Feeds() {
           onPress={() => void loadFirstPage()}
           style={styles.errorBanner}
         >
-          <Text style={styles.errorText}>{error} Tap to retry.</Text>
+          <Text style={styles.errorText} accessibilityRole="alert">
+              {error} Tap to retry.
+            </Text>
         </Pressable>
       ) : null}
     </>

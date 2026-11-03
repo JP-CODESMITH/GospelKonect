@@ -109,7 +109,9 @@ export default function Communities() {
             onPress={() => void load(query)}
             style={styles.errorBanner}
           >
-            <Text style={styles.errorText}>{error} Tap to retry.</Text>
+            <Text style={styles.errorText} accessibilityRole="alert">
+              {error} Tap to retry.
+            </Text>
           </Pressable>
         ) : null}
 

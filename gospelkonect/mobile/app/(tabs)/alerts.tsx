@@ -153,7 +153,9 @@ export default function Alerts() {
             onPress={() => void load()}
             style={styles.errorBanner}
           >
-            <Text style={styles.errorText}>{error} Tap to retry.</Text>
+            <Text style={styles.errorText} accessibilityRole="alert">
+              {error} Tap to retry.
+            </Text>
           </Pressable>
         ) : null}
 
