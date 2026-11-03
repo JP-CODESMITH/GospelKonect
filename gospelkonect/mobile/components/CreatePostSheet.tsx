@@ -37,7 +37,7 @@ export function CreatePostSheet({
   visible: boolean;
   preset: ComposerPreset;
   onClose: () => void;
-  onSubmit: (post: NewPost) => void;
+  onSubmit: (post: NewPost) => Promise<void> | void;
 }) {
   const [text, setText] = useState('');
   const [scripture, setScripture] = useState('');
@@ -59,17 +59,26 @@ export function CreatePostSheet({
   const toggle = (key: Exclude<ComposerPreset, 'none'>) =>
     setActive((prev) => (prev === key ? 'none' : key));
 
-  const share = () => {
+  const share = async () => {
     if (!text.trim()) {
       setError('Write something to share first.');
       return;
     }
     setSending(true);
-    onSubmit({ text: text.trim(), preset: active, scripture: scripture.trim() || undefined });
-    setText('');
-    setScripture('');
     setError('');
-    setSending(false);
+    try {
+      await onSubmit({
+        text: text.trim(),
+        preset: active,
+        scripture: scripture.trim() || undefined,
+      });
+      setText('');
+      setScripture('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not publish your post.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (

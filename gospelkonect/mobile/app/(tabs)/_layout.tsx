@@ -1,9 +1,11 @@
-import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import type { ComponentProps } from 'react';
 import { StyleSheet, type ColorValue } from 'react-native';
 import { AppColors, Radii, Shadows, TokenColors } from '../../constants/theme';
+import { useAuth } from '../../lib/auth';
 
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -17,9 +19,18 @@ function icon(name: IconName, outline: IconName) {
 /**
  * Main tabs — feeds, communities, alerts, profile.
  * Floating glass card bar: icon-only items over a blurred translucent card.
- * Screens are placeholders; no backend wiring yet.
+ * The whole group is protected: signed-out visitors are sent to /login.
  */
 export default function TabsLayout() {
+  const router = useRouter();
+  const { status } = useAuth();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.replace('/login');
+  }, [router, status]);
+
+  if (status !== 'authenticated') return null;
+
   return (
     <Tabs
       screenOptions={{

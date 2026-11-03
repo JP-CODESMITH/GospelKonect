@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../constants/theme';
@@ -16,14 +16,31 @@ const OPTIONS: { key: Exclude<ComposerPreset, 'none'>; label: string; icon: Icon
  * Sticky composer card under the top bar.
  * Tap anywhere to open the create-post sheet with an optional preset.
  */
-export function PostComposerCard({ onTap }: { onTap: (preset: ComposerPreset) => void }) {
+export function PostComposerCard({
+  onTap,
+  initial,
+  avatar,
+}: {
+  onTap: (preset: ComposerPreset) => void;
+  initial?: string;
+  avatar?: string | null;
+}) {
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
         <View style={styles.row}>
-          <View style={styles.avatar} accessible accessibilityLabel="Your avatar">
-            <Text style={styles.avatarText}>Y</Text>
-          </View>
+          {avatar ? (
+            <Image
+              source={{ uri: avatar }}
+              style={styles.avatarImage}
+              accessible
+              accessibilityLabel="Your avatar"
+            />
+          ) : (
+            <View style={styles.avatar} accessible accessibilityLabel="Your avatar">
+              <Text style={styles.avatarText}>{initial ?? 'Y'}</Text>
+            </View>
+          )}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Create a post"
@@ -81,6 +98,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: TokenColors.onPrimary,
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: TokenColors.surfaceContainer,
   },
   prompt: {
     flex: 1,
