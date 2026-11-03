@@ -24,10 +24,21 @@
   --color-lavender: #e7eeff;
   --color-lavender-soft: #f0f3ff;
 
+  /* Auth surface tokens, ported from mobile TokenColors/AppColors */
+  --color-on-surface: #111c2d;
+  --color-on-surface-variant: #444651;
+  --color-surface-lowest: #ffffff;
+  --color-outline: #757682;
+  --color-outline-variant: #c5c5d3;
+  --color-on-primary: #ffffff;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+
   --shadow-card: 0 2px 8px -2px rgb(30 41 59 / 0.04), 0 1px 4px -1px rgb(30 41 59 / 0.02);
   --shadow-sheet: 0 10px 25px -5px rgb(30 41 59 / 0.08), 0 8px 10px -6px rgb(30 41 59 / 0.04);
   --shadow-warm: 0 12px 24px -4px rgb(30 58 138 / 0.22);
 
+  --radius-input: 16px;
   --radius-card: 16px;
   --radius-hero: 28px;
 }

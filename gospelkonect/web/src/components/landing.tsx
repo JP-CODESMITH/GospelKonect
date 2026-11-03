@@ -18,6 +18,14 @@ import {
   Users,
 } from 'lucide-react'
 import { Button, Card, Chip, PrayerBadge, SectionHeading } from './ui'
+import {
+  AuthAlternate,
+  AuthError,
+  AuthField,
+  AuthNotice,
+  AuthPrimaryButton,
+  OrDivider,
+} from './auth'
 import { CountUp, Reveal } from './motion'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 
@@ -40,9 +48,9 @@ export function Header() {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <a href="#top" className="flex items-center gap-2.5" aria-label="GospelKonect home">
-          <img src="/logo.png" alt="GospelKonect logo" className="h-9 w-9 rounded-full object-cover" />
-          <span className="font-display text-[17px] font-bold tracking-tight text-ink">
+        <a href="#top" className="flex min-w-0 items-center gap-2.5" aria-label="GospelKonect home">
+          <img src="/logo.png" alt="GospelKonect logo" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+          <span className="truncate font-display text-[17px] font-bold tracking-tight text-ink">
             GospelKonect
           </span>
         </a>
@@ -51,17 +59,20 @@ export function Header() {
           <a className="transition-colors hover:text-cerulean" href="#features">Features</a>
           <a className="transition-colors hover:text-cerulean" href="#stories">Stories</a>
           <a className="transition-colors hover:text-cerulean" href="#safety">Safety</a>
+          <a className="transition-colors hover:text-cerulean" href="#join">Join</a>
           <a className="transition-colors hover:text-cerulean" href="#faq">FAQ</a>
         </nav>
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2.5">
           <a
-            href="#app"
-            className="hidden min-h-[44px] items-center rounded-full px-4 font-display text-sm font-semibold text-ink transition-colors hover:bg-sunken sm:inline-flex"
+            href="#join"
+            className="hidden min-h-[44px] items-center rounded-full px-4 font-display text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-sunken sm:inline-flex"
           >
             Sign in
           </a>
-          <Button href="#app" className="min-h-[44px] px-5 text-sm">
-            Join fellowship <ArrowRight size={16} aria-hidden="true" />
+          <Button href="#join" className="min-h-[44px] px-4 text-sm whitespace-nowrap sm:px-5">
+            <span className="sm:hidden">Join</span>
+            <span className="hidden sm:inline">Join fellowship</span>
+            <ArrowRight size={16} aria-hidden="true" className="hidden sm:block" />
           </Button>
         </div>
       </div>
@@ -131,7 +142,7 @@ export function Hero() {
             calm feed. No noise, no outrage loops. Just people carrying one another in faith.
           </p>
           <div data-hero="cta" className="mt-8 flex flex-wrap items-center gap-3">
-            <Button href="#app">
+            <Button href="#join">
               <HandHeart size={17} aria-hidden="true" /> Start praying together
             </Button>
             <Button href="#feed" variant="ghost">
@@ -394,7 +405,7 @@ export function HowItWorks() {
             title="From quiet signup to shared Amen in minutes"
           />
           <div className="mt-8">
-            <Button href="#app">
+            <Button href="#join">
               Begin with prayer <ArrowRight size={16} aria-hidden="true" />
             </Button>
           </div>
@@ -453,292 +464,6 @@ export function Stories() {
     </section>
   )
 }
-}
-
-/* ---------------- Auth Inspired (mobile login/signup patterns) ---------------- */
-
-export function AuthInspired() {
-  const [open, setOpen] = useState<'login' | 'register'>('login')
-
-  return (
-    <section id="app" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6 lg:pb-24">
-      <Reveal>
-        <div className="relative overflow-hidden rounded-hero bg-cerulean px-6 py-12 text-white sm:px-12 lg:px-16">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <p className="font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-sungold-soft">
-                Get the app
-              </p>
-              <h2 className="mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl">
-                Carry prayer in your pocket.
-              </h2>
-              <p className="mt-3 max-w-lg text-[16px] leading-7 text-white/80">
-                Start on mobile with the GospelKonect fellowship, then return here for stories,
-                devotionals and church life on the big screen.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a
-                  href="#top"
-                  className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-white px-6 font-display text-[15px] font-semibold text-cerulean transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Join the fellowship <ArrowRight size={16} aria-hidden="true" />
-                </a>
-                <a
-                  href="#feed"
-                  className="inline-flex min-h-[48px] items-center rounded-full border border-white/30 px-6 font-display text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-                >
-                  Explore the feed
-                </a>
-              </div>
-            </div>
-            <div className="lg:col-span-2 rounded-card border border-line bg-white p-8 shadow-card">
-              <h3 className="font-display text-[20px] font-semibold text-ink mb-6">
-                {open === 'login' ? 'Sign in' : 'Create account'}
-              </h3>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold font-display text-onSurface mb-2">
-                    Email address
-                  </label>
-                  <input
-                    className="w-full rounded-input min-h-[52px] px-4 font-display text-[15px] font-medium text-ink placeholder-muted/60 bg-alabaster border border-line focus:border-cerulean focus:bg-surfaceContainerLowest focus:outline-none"
-                    type="email"
-                    placeholder="you@church.org"
-                    autoComplete="email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold font-display text-onSurface mb-2">
-                    Password
-                  </label>
-                  <input
-                    className="w-full rounded-input min-h-[52px] px-4 font-display text-[15px] font-medium text-ink placeholder-muted/60 bg-alabaster border border-line focus:border-cerulean focus:bg-surfaceContainerLowest focus:outline-none"
-                    type="password"
-                    placeholder="••••••••"
-                    autoComplete="password"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Button
-                    min-h-[52px]
-                    rounded-full
-                    px-8
-                    font-display
-                    text-sm
-                    font-semibold
-                    text-onPrimary
-                    bgOnSurface
-                    transition-colors
-                    hover:opacity-90
-                    active:scale-95
-                  >
-                    {open === 'login' ? 'Sign in' : 'Create account'}
-                  </Button>
-                </div>
-                <p className="text-[13px] font-medium font-display text-muted/70">
-                  {open === 'login' ? 'Forgot password?' : 'Already have an account?'}
-                  <span
-                    className="font-display text-[13px] font-medium text-cerulean cursor-pointer"
-                    onClick={() => setOpen(open === 'login' ? 'register' : 'login')}
-                  >
-                    {open === 'login' ? 'Reset' : 'Sign in'}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-    </section>
-  )
-}
-
-export function AuthInspired() {
-  const [open, setOpen] = useState('login')
-
-  return (
-    <section id="app" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6 lg:pb-24">
-      <Reveal>
-        <div className="relative overflow-hidden rounded-hero bg-cerulean px-6 py-12 text-white sm:px-12 lg:px-16">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <p className="font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-sungold-soft">
-                Get the app
-              </p>
-              <h2 className="mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl">
-                Carry prayer in your pocket.
-              </h2>
-              <p className="mt-3 max-w-lg text-[16px] leading-7 text-white/80">
-                Start on mobile with the GospelKonect fellowship, then return here for stories,
-                devotionals and church life on the big screen.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a
-                  href="#top"
-                  className="inline-flex min-h-48 items-center gap-2 rounded-full bg-white px-6 font-display text-[15px] font-semibold text-cerulean transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Join the fellowship <ArrowRight size={16} aria-hidden="true" />
-                </a>
-                <a
-                  href="#feed"
-                  className="inline-flex min-h-48 items-center rounded-full border border-white/30 px-6 font-display text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-                >
-                  Explore the feed
-                </a>
-              </div>
-            </div>
-            <div className="lg:col-span-2 rounded-card border border-line bg-white p-8 shadow-card">
-              <h3 className="font-display text-[20px] font-semibold text-ink mb-6">
-                {open === 'login' ? 'Sign in' : 'Create account'}
-              </h3>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold font-display text-onSurface mb-2">
-                    Email address
-                  </label>
-                  <input
-                    className="w-full rounded-input min-h-[52px] px-4 font-display text-[15px] font-medium text-ink placeholder-muted/60 bg-alabaster border border-line focus:border-cerulean focus:bg-surfaceContainerLowest focus:outline-none"
-                    type="email"
-                    placeholder="you@church.org"
-                    autoComplete="email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold font-display text-onSurface mb-2">
-                    Password
-                  </label>
-                  <input
-                    className="w-full rounded-input min-h-[52px] px-4 font-display text-[15px] font-medium text-ink placeholder-muted/60 bg-alabaster border border-line focus:border-cerulean focus:bg-surfaceContainerLowest focus:outline-none"
-                    type="password"
-                    placeholder="••••••••"
-                    autoComplete="password"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Button
-                    min-h-52
-                    rounded-full
-                    px-8
-                    font-display
-                    text-sm
-                    font-semibold
-                  >
-                    {open === 'login' ? 'Sign in' : 'Create account'}
-                  </Button>
-                </div>
-                <p className="text-[13px] font-medium font-display text-muted/70">
-                  {open === 'login' ? 'Forgot password?' : 'Already have an account?'}
-                  <span
-                    className="font-display text-[13px] font-medium text-cerulean cursor-pointer"
-                    onClick={() => setOpen(open === 'login' ? 'register' : 'login')}
-                  >
-                    {open === 'login' ? 'Reset' : 'Sign in'}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-    </section>
-  )
-}
-
-/* ---------------- Auth Inspired (mobile login/signup patterns) ---------------- */
-
-export function AuthInspired() {
-  const [open, setOpen] = useState('login')
-
-  return (
-    <section id="app" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6 lg:pb-24">
-      <Reveal>
-        <div className="relative overflow-hidden rounded-hero bg-cerulean px-6 py-12 text-white sm:px-12 lg:px-16">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <p className="font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-sungold-soft">
-                Get the app
-              </p>
-              <h2 className="mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl">
-                Carry prayer in your pocket.
-              </h2>
-              <p className="mt-3 max-w-lg text-[16px] leading-7 text-white/80">
-                Start on mobile with the GospelKonect fellowship, then return here for stories,
-                devotionals and church life on the big screen.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a
-                  href="#top"
-                  className="inline-flex min-h-48 items-center gap-2 rounded-full bg-white px-6 font-display text-[15px] font-semibold text-cerulean transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Join the fellowship <ArrowRight size={16} aria-hidden="true" />
-                </a>
-                <a
-                  href="#feed"
-                  className="inline-flex min-h-48 items-center rounded-full border border-white/30 px-6 font-display text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-                >
-                  Explore the feed
-                </a>
-              </div>
-            </div>
-            <div className="lg:col-span-2 rounded-card border border-line bg-white p-8 shadow-card">
-              <h3 className="font-display text-[20px] font-semibold text-ink mb-6">
-                {open === 'login' ? 'Sign in' : 'Create account'}
-              </h3>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold font-display text-onSurface mb-2">
-                    Email address
-                  </label>
-                  <input
-                    className="w-full rounded-input min-h-[52px] px-4 font-display text-[15px] font-medium text-ink placeholder-muted/60 bg-alabaster border border-line focus:border-cerulean focus:bg-surfaceContainerLowest focus:outline-none"
-                    type="email"
-                    placeholder="you@church.org"
-                    autoComplete="email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold font-display text-onSurface mb-2">
-                    Password
-                  </label>
-                  <input
-                    className="w-full rounded-input min-h-[52px] px-4 font-display text-[15px] font-medium text-ink placeholder-muted/60 bg-alabaster border border-line focus:border-cerulean focus:bg-surfaceContainerLowest focus:outline-none"
-                    type="password"
-                    placeholder="••••••••"
-                    autoComplete="password"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Button
-                    min-h-52
-                    rounded-full
-                    px-8
-                    font-display
-                    text-sm
-                    font-semibold
-                  >
-                    {open === 'login' ? 'Sign in' : 'Create account'}
-                  </Button>
-                </div>
-                <p className="text-[13px] font-medium font-display text-muted/70">
-                  {open === 'login' ? 'Forgot password?' : 'Already have an account?'}
-                  <span
-                    className="font-display text-[13px] font-medium text-cerulean cursor-pointer"
-                    onClick={() => setOpen(open === 'login' ? 'register' : 'login')}
-                  >
-                    {open === 'login' ? 'Reset' : 'Sign in'}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Reveal>
-    </section>
-  )
-}
 
 /* ---------------- Safety / App / FAQ / Footer ---------------- */
 
@@ -780,49 +505,157 @@ export function Safety() {
   )
 }
 
-export function AppCta() {
+export function JoinSection() {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const isLogin = mode === 'login'
+
+  function switchMode(next: 'login' | 'register') {
+    setMode(next)
+    setError(null)
+    setNotice(null)
+  }
+
+  function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (busy) return
+    setNotice(null)
+    if (isLogin && (email.trim() === '' || password === '')) {
+      setError('Enter your email and password.')
+      return
+    }
+    if (!isLogin && (name.trim() === '' || email.trim() === '' || password === '')) {
+      setError('Fill in your name, email and password.')
+      return
+    }
+    setError(null)
+    setBusy(true)
+    window.setTimeout(() => {
+      setBusy(false)
+      setNotice(
+        isLogin
+          ? 'Demo only. The sign-in request is not wired to the API yet.'
+          : 'Demo only. The create-account request is not wired to the API yet.',
+      )
+    }, 900)
+  }
+
   return (
-    <section id="app" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6 lg:pb-24">
+    <section id="join" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6 lg:pb-24">
       <Reveal>
-        <div className="relative overflow-hidden rounded-hero bg-cerulean px-6 py-12 text-white sm:px-12 lg:px-16">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-            <div>
-              <p className="font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-sungold-soft">
-                Get the app
-              </p>
-              <h2 className="mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl">
-                Carry prayer in your pocket.
-              </h2>
-              <p className="mt-3 max-w-lg text-[16px] leading-7 text-white/80">
-                Start on mobile with the GospelKonect fellowship, then return here for stories,
-                devotionals and church life on the big screen.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a
-                  href="#top"
-                  className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-white px-6 font-display text-[15px] font-semibold text-cerulean transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Join the fellowship <ArrowRight size={16} aria-hidden="true" />
-                </a>
-                <a
-                  href="#feed"
-                  className="inline-flex min-h-[48px] items-center rounded-full border border-white/30 px-6 font-display text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-                >
-                  Explore the feed
-                </a>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 rounded-card bg-white/10 p-5 backdrop-blur">
-              <img src="/logo.png" alt="GospelKonect app icon" className="h-16 w-16 rounded-2xl bg-white object-cover" />
-              <div>
-                <p className="font-display text-[16px] font-bold">GospelKonect</p>
-                <p className="text-[14px] text-white/75">iOS and Android · Free</p>
-                <p className="mt-1 text-[13px] text-white/60">Your church invite link works at signup.</p>
-              </div>
-            </div>
-          </div>
+        <div className="mx-auto max-w-[440px] text-center">
+          <p className="font-display text-[13px] font-semibold tracking-[0.14em] text-sungold uppercase">
+            Join the fellowship
+          </p>
+          <h2 className="mt-3 font-display text-3xl font-bold text-ink sm:text-4xl">
+            {isLogin ? 'Welcome back' : 'Join GospelKonect'}
+          </h2>
+          <p className="mt-2 text-[15px] text-muted">
+            {isLogin ? 'Sign in to continue' : 'Create your account to get started'}
+          </p>
         </div>
+      </Reveal>
+
+      <Reveal delay={0.06}>
+        <div className="mx-auto mt-8 max-w-[440px] rounded-hero border border-line bg-surface-lowest p-5 shadow-card sm:p-6">
+          <div
+            role="tablist"
+            aria-label="Account access"
+            className="grid grid-cols-2 gap-1 rounded-full border border-line bg-sunken p-1"
+          >
+            {(['login', 'register'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => switchMode(m)}
+                className={`h-11 cursor-pointer rounded-full font-display text-[14px] font-semibold transition-colors duration-200 ${
+                  mode === m ? 'bg-cerulean text-white shadow-warm' : 'text-muted hover:text-ink'
+                }`}
+              >
+                {m === 'login' ? 'Sign in' : 'Create account'}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
+            <AuthError message={error} />
+
+            {!isLogin ? (
+              <AuthField
+                label="Full name"
+                placeholder="Jane Doe"
+                autoComplete="name"
+                value={name}
+                onChange={setName}
+              />
+            ) : null}
+
+            <AuthField
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              value={email}
+              onChange={setEmail}
+            />
+
+            <AuthField
+              label="Password"
+              type="password"
+              placeholder={isLogin ? 'Your password' : 'Minimum 8 characters'}
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              value={password}
+              onChange={setPassword}
+            />
+
+            <div className="pt-1">
+              <AuthPrimaryButton busy={busy}>
+                {isLogin ? 'Sign In' : 'Create Account'}
+              </AuthPrimaryButton>
+            </div>
+
+            <OrDivider />
+
+            <AuthAlternate
+              options={[
+                { label: 'Continue with Google', onPick: () => setNotice('Google sign-in is not available yet.') },
+                { label: 'Continue with Apple', onPick: () => setNotice('Apple sign-in is not available yet.') },
+              ]}
+            />
+
+            <AuthNotice message={notice} />
+
+            <p className="flex flex-wrap items-center justify-center gap-1 pt-1 text-center text-[15px] text-muted">
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}
+              <button
+                type="button"
+                onClick={() => switchMode(isLogin ? 'register' : 'login')}
+                className="cursor-pointer rounded px-2 py-1 font-display font-semibold text-cerulean-deep underline transition-colors duration-200 hover:text-cerulean"
+              >
+                {isLogin ? 'Create Account' : 'Sign In'}
+              </button>
+            </p>
+          </form>
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.12}>
+        <ul className="mx-auto mt-8 flex max-w-[440px] flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-muted">
+          {['Guarded with care', 'Gentle notifications', 'Church-first timelines'].map((t) => (
+            <li key={t} className="flex items-center gap-1.5">
+              <ShieldCheck size={15} className="text-prayer-ink" aria-hidden="true" />
+              {t}
+            </li>
+          ))}
+        </ul>
       </Reveal>
     </section>
   )
@@ -903,6 +736,7 @@ export function Footer() {
           <a className="hover:text-cerulean" href="#features">Features</a>
           <a className="hover:text-cerulean" href="#stories">Stories</a>
           <a className="hover:text-cerulean" href="#safety">Safety</a>
+          <a className="hover:text-cerulean" href="#join">Join</a>
           <a className="hover:text-cerulean" href="#faq">FAQ</a>
         </nav>
         <p className="text-[13px] text-muted">© 2026 GospelKonect. Grace and peace.</p>

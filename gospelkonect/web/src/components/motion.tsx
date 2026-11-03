@@ -4,10 +4,20 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 
 let registered = false
+let refreshed = false
 function ensureGsap() {
-  if (!registered && typeof window !== 'undefined') {
+  if (typeof window === 'undefined') return
+  if (!registered) {
     gsap.registerPlugin(ScrollTrigger)
     registered = true
+  }
+  // Fonts, images and the marquee change layout height after mount, which
+  // leaves trigger start positions stale. Refresh once the page settles.
+  if (!refreshed) {
+    refreshed = true
+    const settle = () => ScrollTrigger.refresh()
+    window.addEventListener('load', settle)
+    window.setTimeout(settle, 600)
   }
 }
 
@@ -29,17 +39,20 @@ export function Reveal({
     if (reduced || !ref.current) return
     ensureGsap()
     const el = ref.current
+    // Play once and stay revealed. `reverse` would re-hide content on
+    // scroll-up, which leaves the page blank when captured at the top.
     const tween = gsap.from(el, {
       opacity: 0,
       y,
       duration: 0.55,
       delay,
       ease: 'power1.out',
-      scrollTrigger: { trigger: el, start: 'top 90%', toggleActions: 'play none none reverse' },
+      scrollTrigger: { trigger: el, start: 'top 90%', once: true },
     })
     return () => {
       tween.scrollTrigger?.kill()
       tween.kill()
+      gsap.set(el, { clearProps: 'opacity,transform' })
     }
   }, [reduced, delay, y])
 

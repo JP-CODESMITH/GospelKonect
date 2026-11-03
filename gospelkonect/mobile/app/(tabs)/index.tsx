@@ -273,7 +273,11 @@ export default function Feeds() {
         pointerEvents="none"
       />
       <View style={styles.topBar}>
-        <GlassIconButton name="search-outline" label="Search feeds" />
+        <GlassIconButton
+          name="add-outline"
+          label="Create a post"
+          onPress={() => openComposer('none')}
+        />
         <Text style={styles.topTitle}>Feeds</Text>
         <GlassIconButton
           name="refresh-outline"

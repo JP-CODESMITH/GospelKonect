@@ -1,5 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { AppCta, AuthInspired, Faq, Features, FeedPreview, Footer, Header, Hero, HowItWorks, Safety, Stories } from '../components/landing'
+import {
+  Faq,
+  Features,
+  FeedPreview,
+  Footer,
+  Header,
+  Hero,
+  HowItWorks,
+  JoinSection,
+  Safety,
+  Stories,
+} from '../components/landing'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -19,9 +30,8 @@ function Home() {
         <Features />
         <HowItWorks />
         <Stories />
-        <AuthInspired />
         <Safety />
-        <AppCta />
+        <JoinSection />
         <Faq />
       </main>
       <Footer />
