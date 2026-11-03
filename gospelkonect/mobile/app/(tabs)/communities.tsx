@@ -1,55 +1,181 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
-
-// Placeholder communities — static mock data, no backend wiring yet.
-const GROUPS = [
-  { id: '1', name: 'Morning Devotionals', members: '12.4k members' },
-  { id: '2', name: 'City Prayer Chain', members: '3.1k members' },
-  { id: '3', name: 'Worship Musicians', members: '8.7k members' },
-  { id: '4', name: 'New Believers', members: '5.2k members' },
-];
+import { followUser, mediaUrl, searchUsers, unfollowUser } from '../../lib/api';
+import { errorText, initials } from '../../lib/format';
+import type { DiscoverUser } from '../../lib/types';
 
 export default function Communities() {
-  const [joined, setJoined] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [people, setPeople] = useState<DiscoverUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggle = (id: string) =>
-    setJoined((prev) => (prev.includes(id) ? prev.filter((j) => j !== id) : [...prev, id]));
+  const load = useCallback(async (search: string, refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+    try {
+      const page = await searchUsers({ search: search.trim() || undefined, limit: 30 });
+      setPeople(page.items);
+    } catch (err) {
+      setError(errorText(err, 'Could not load people.'));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void load(query);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [load, query]);
+
+  const toggleFollow = async (person: DiscoverUser) => {
+    if (busyId) return;
+    const next = !person.isFollowing;
+    setBusyId(person.id);
+    setError(null);
+    setPeople((prev) =>
+      prev.map((item) => (item.id === person.id ? { ...item, isFollowing: next } : item)),
+    );
+    try {
+      if (next) await followUser(person.id);
+      else await unfollowUser(person.id);
+    } catch (err) {
+      setPeople((prev) =>
+        prev.map((item) =>
+          item.id === person.id ? { ...item, isFollowing: person.isFollowing } : item,
+        ),
+      );
+      setError(errorText(err, 'Could not update that follow.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void load(query, true)}
+            tintColor={TokenColors.primary}
+          />
+        }
+      >
         <Text style={styles.title}>Communities</Text>
         <Text style={styles.sub}>Find your circle</Text>
-        {GROUPS.map((group) => {
-          const isJoined = joined.includes(group.id);
-          return (
-            <View key={group.id} style={styles.card}>
+
+        <View style={styles.searchWrap}>
+          <Ionicons name="search-outline" size={18} color={TokenColors.outline} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search people by name or @handle"
+            placeholderTextColor={AppColors.placeholder}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            accessibilityLabel="Search people"
+            style={styles.searchInput}
+          />
+        </View>
+
+        {error ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading people"
+            onPress={() => void load(query)}
+            style={styles.errorBanner}
+          >
+            <Text style={styles.errorText}>{error} Tap to retry.</Text>
+          </Pressable>
+        ) : null}
+
+        {loading && people.length === 0 ? (
+          <View style={styles.stateBox}>
+            <ActivityIndicator color={TokenColors.primary} />
+            <Text style={styles.stateText}>Finding people…</Text>
+          </View>
+        ) : people.length === 0 ? (
+          <View style={styles.stateBox}>
+            <Ionicons name="people-outline" size={28} color={TokenColors.outline} />
+            <Text style={styles.stateTitle}>No one found</Text>
+            <Text style={styles.stateText}>Try a different name or handle.</Text>
+          </View>
+        ) : (
+          people.map((person) => (
+            <View key={person.id} style={styles.card}>
               <View style={styles.row}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{group.name.charAt(0)}</Text>
-                </View>
+                {person.avatar ? (
+                  <Image source={{ uri: mediaUrl(person.avatar) }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{initials(person.name)}</Text>
+                  </View>
+                )}
                 <View style={styles.info}>
-                  <Text style={styles.name}>{group.name}</Text>
-                  <Text style={styles.members}>{group.members}</Text>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {person.name}
+                  </Text>
+                  <Text style={styles.handle} numberOfLines={1}>
+                    @{person.username}
+                    {person.isFollowedBy ? ' · follows you' : ''}
+                  </Text>
                 </View>
                 <Pressable
-                  onPress={() => toggle(group.id)}
+                  onPress={() => void toggleFollow(person)}
+                  disabled={busyId === person.id}
                   accessibilityRole="button"
-                  accessibilityLabel={isJoined ? `Leave ${group.name}` : `Join ${group.name}`}
-                  accessibilityState={{ selected: isJoined }}
+                  accessibilityLabel={
+                    person.isFollowing ? `Unfollow ${person.name}` : `Follow ${person.name}`
+                  }
+                  accessibilityState={{
+                    selected: person.isFollowing,
+                    disabled: busyId === person.id,
+                    busy: busyId === person.id,
+                  }}
                   hitSlop={4}
-                  style={[styles.joinBtn, isJoined && styles.joinedBtn]}
+                  style={[
+                    styles.joinBtn,
+                    person.isFollowing && styles.joinedBtn,
+                    busyId === person.id && styles.busy,
+                  ]}
                 >
-                  <Text style={[styles.joinLabel, isJoined && styles.joinedLabel]}>
-                    {isJoined ? 'Joined' : 'Join'}
+                  <Text style={[styles.joinLabel, person.isFollowing && styles.joinedLabel]}>
+                    {person.isFollowing ? 'Following' : 'Follow'}
                   </Text>
                 </Pressable>
               </View>
+              {person.bio ? (
+                <Text style={styles.bio} numberOfLines={2}>
+                  {person.bio}
+                </Text>
+              ) : null}
             </View>
-          );
-        })}
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -72,6 +198,51 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 16,
   },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 9999,
+    backgroundColor: TokenColors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: AppColors.borderSubtle,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodyMd.fontSize,
+    color: TokenColors.onSurface,
+  },
+  errorBanner: {
+    backgroundColor: TokenColors.errorContainer,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  errorText: {
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodySm.fontSize,
+    color: TokenColors.error,
+    textAlign: 'center',
+  },
+  stateBox: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24, gap: 8 },
+  stateTitle: {
+    fontFamily: Fonts.display,
+    fontSize: TypeScale.headlineSm.fontSize,
+    fontWeight: '700',
+    color: TokenColors.onSurface,
+  },
+  stateText: {
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodySm.fontSize,
+    lineHeight: TypeScale.bodySm.lineHeight,
+    color: TokenColors.onSurfaceVariant,
+    textAlign: 'center',
+  },
   card: {
     backgroundColor: TokenColors.surfaceContainerLowest,
     borderRadius: 16,
@@ -91,15 +262,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    backgroundColor: TokenColors.surfaceContainer,
+  },
   avatarText: {
     fontFamily: Fonts.display,
     fontSize: 18,
     fontWeight: '700',
     color: TokenColors.onTertiary,
   },
-  info: { flex: 1 },
+  info: { flex: 1, marginRight: 8 },
   name: { fontFamily: Fonts.display, fontSize: 15, fontWeight: '600', color: TokenColors.onSurface },
-  members: { fontFamily: Fonts.body, fontSize: 13, color: TokenColors.onSurfaceVariant, marginTop: 2 },
+  handle: {
+    fontFamily: Fonts.body,
+    fontSize: 13,
+    color: TokenColors.onSurfaceVariant,
+    marginTop: 2,
+  },
+  bio: {
+    fontFamily: Fonts.body,
+    fontSize: TypeScale.bodySm.fontSize,
+    lineHeight: TypeScale.bodySm.lineHeight,
+    color: TokenColors.onSurfaceVariant,
+    marginTop: 10,
+  },
   joinBtn: {
     borderRadius: 9999,
     backgroundColor: TokenColors.onSurface,
@@ -108,6 +298,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   joinedBtn: { backgroundColor: 'transparent', borderWidth: 1, borderColor: AppColors.borderSubtle },
-  joinLabel: { fontFamily: Fonts.display, fontSize: 13, fontWeight: '600', color: TokenColors.onPrimary },
+  busy: { opacity: 0.6 },
+  joinLabel: {
+    fontFamily: Fonts.display,
+    fontSize: 13,
+    fontWeight: '600',
+    color: TokenColors.onPrimary,
+  },
   joinedLabel: { color: TokenColors.onSurfaceVariant },
 });
