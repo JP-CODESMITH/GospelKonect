@@ -258,8 +258,8 @@ export default function Feeds() {
           style={styles.errorBanner}
         >
           <Text style={styles.errorText} accessibilityRole="alert">
-              {error} Tap to retry.
-            </Text>
+            {error} Tap to retry.
+          </Text>
         </Pressable>
       ) : null}
     </>
