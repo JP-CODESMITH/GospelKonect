@@ -174,20 +174,33 @@ export function getMe(): Promise<PublicUser> {
   return request<PublicUser>('/auth/me', {}, { auth: 'required' });
 }
 
+/** One logout call. Kept raw so the body always carries the *current* refresh token. */
+async function sendLogout(accessToken: string, refreshToken: string): Promise<Response> {
+  return fetch(`${API_URL}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ refreshToken }),
+  });
+}
+
 /** POST /auth/logout — revokes this session. Local tokens are always cleared. */
 export async function logoutUser(): Promise<void> {
   const stored = await loadSession();
+  if (!stored) return;
+
   try {
-    await request<void>(
-      '/auth/logout',
-      {
-        method: 'POST',
-        body: JSON.stringify({ refreshToken: stored?.refreshToken }),
-      },
-      { auth: 'required' },
-    );
+    let res = await sendLogout(stored.accessToken, stored.refreshToken);
+    // The access token expired between the last request and sign-out. Rotate
+    // once and revoke the NEW refresh token, otherwise that session survives.
+    if (res.status === 401 && (await refreshAccessToken())) {
+      const next = await loadSession();
+      if (next) res = await sendLogout(next.accessToken, next.refreshToken);
+    }
   } catch {
-    // A dead/expired session is already logged out as far as this device cares.
+    // Offline sign-out still clears the device.
   } finally {
     await clearSession();
   }
