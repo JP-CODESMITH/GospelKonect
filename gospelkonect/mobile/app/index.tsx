@@ -3,13 +3,16 @@ import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, LogoAsset, TokenColors, TypeScale } from '../constants/theme';
+import { useAuth } from '../lib/auth';
 
 /**
  * Splash — white canvas, 160px logo, GospelKonect wordmark,
- * 60x3 sun-gold bar. 900ms fade+scale, auto-replace to onboarding at 2600ms.
+ * 60x3 sun-gold bar. Fades in, then routes by session state: signed-in users
+ * go straight to the tabs, everyone else to onboarding.
  */
 export default function Splash() {
   const router = useRouter();
+  const { status } = useAuth();
   const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -18,9 +21,16 @@ export default function Splash() {
       duration: 900,
       useNativeDriver: true,
     }).start();
-    const t = setTimeout(() => router.replace('/onboarding'), 2600);
+  }, [fade]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    const t = setTimeout(
+      () => router.replace(status === 'authenticated' ? '/(tabs)' : '/onboarding'),
+      1400,
+    );
     return () => clearTimeout(t);
-  }, [fade, router]);
+  }, [router, status]);
 
   return (
     <SafeAreaView style={styles.root}>

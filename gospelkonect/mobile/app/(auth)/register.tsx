@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ImageBackground,
   KeyboardAvoidingView,
@@ -14,20 +14,25 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
-import { ApiError, loginUser, registerUser, usernameFromName } from '../../lib/api';
-import { saveSession } from '../../lib/session';
+import { ApiError } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 
 const OnboardingBackground = require('../../assets/images/GospelKonect Community Splash Screen.png');
 
 /** Create account against the NestJS backend, then sign straight in. */
 export default function Register() {
   const router = useRouter();
+  const { status, signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'authenticated') router.replace('/(tabs)');
+  }, [router, status]);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -51,11 +56,8 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const username = usernameFromName(name.trim(), email.trim());
-      await registerUser(username, email, password);
-      const session = await loginUser(email, password);
-      await saveSession(session.accessToken, session.refreshToken);
-      router.replace('/home');
+      await signUp(name.trim(), email, password);
+      router.replace('/(tabs)');
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 409

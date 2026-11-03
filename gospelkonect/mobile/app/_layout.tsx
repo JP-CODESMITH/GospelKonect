@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import * as NativeSplash from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { TokenColors } from '../constants/theme';
+import { AuthProvider } from '../lib/auth';
 
 NativeSplash.preventAutoHideAsync().catch(() => {});
 RouterSplash.preventAutoHideAsync().catch(() => {});
@@ -24,7 +25,7 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -38,6 +39,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="home" />
       </Stack>
-    </>
+    </AuthProvider>
   );
 }

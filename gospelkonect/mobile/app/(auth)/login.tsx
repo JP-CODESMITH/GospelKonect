@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ImageBackground,
   KeyboardAvoidingView,
@@ -14,24 +14,26 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppColors, Fonts, Shadows, TokenColors, TypeScale } from '../../constants/theme';
-import { ApiError, loginUser } from '../../lib/api';
-import { saveSession } from '../../lib/session';
+import { ApiError } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
 
 const OnboardingBackground = require('../../assets/images/GospelKonect Community Splash Screen.png');
 
 /** Sign in against the NestJS backend, session persisted to secure storage. */
 export default function Login() {
   const router = useRouter();
+  const { status, signIn: signInWithBackend } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (status === 'authenticated') router.replace('/(tabs)');
+  }, [router, status]);
+
   const signIn = async () => {
-    // PREVIEW ONLY (backend offline): set EXPO_PUBLIC_PREVIEW_TABS=1 to jump
-    // straight to tabs. Backend logic below stays intact — unset the var to go live.
-   
     if (loading) return;
     setError(null);
     if (email.trim().length === 0 || password.length === 0) {
@@ -40,9 +42,8 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      const session = await loginUser(email, password);
-      await saveSession(session.accessToken, session.refreshToken);
-      router.replace('/home');
+      await signInWithBackend(email, password);
+      router.replace('/(tabs)');
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 401
@@ -140,7 +141,7 @@ export default function Login() {
 
               <View style={{ height: 20 }} />
               <Pressable
-                onPress={()=>{router.push("/(tabs)")}}
+                onPress={signIn}
                 disabled={loading}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
