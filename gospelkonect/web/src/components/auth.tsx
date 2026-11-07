@@ -80,17 +80,20 @@ export function AuthPrimaryButton({
   type,
   busy,
   className,
+  onClick,
 }: {
   children: ReactNode
   type?: 'submit' | 'button'
   busy?: boolean
   className?: string
+  onClick?: () => void
 }) {
   return (
     <button
       type={type ?? 'submit'}
       disabled={busy}
       aria-busy={busy || undefined}
+      onClick={onClick}
       className={cn(
         'h-13 w-full cursor-pointer rounded-full bg-on-surface px-6 font-display text-[15px] leading-5 font-bold tracking-[0.02em] text-on-primary transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60',
         className,

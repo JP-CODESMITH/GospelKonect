@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
@@ -28,6 +29,8 @@ import {
 } from './auth'
 import { CountUp, Reveal } from './motion'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
+import { useAuth } from '../lib/auth'
+import { ApiError } from '../lib/api'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -35,12 +38,15 @@ gsap.registerPlugin(ScrollTrigger)
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
+  const { status, user, signOut } = useAuth()
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+  const authed = status === 'authenticated' && user !== null
+  const firstName = user?.name?.trim().split(/\s+/)[0] ?? ''
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
@@ -63,17 +69,37 @@ export function Header() {
           <a className="transition-colors hover:text-cerulean" href="#faq">FAQ</a>
         </nav>
         <div className="flex shrink-0 items-center gap-2.5">
-          <a
-            href="#join"
-            className="hidden min-h-[44px] items-center rounded-full px-4 font-display text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-sunken sm:inline-flex"
-          >
-            Sign in
-          </a>
-          <Button href="#join" className="min-h-[44px] px-4 text-sm whitespace-nowrap sm:px-5">
-            <span className="sm:hidden">Join</span>
-            <span className="hidden sm:inline">Join fellowship</span>
-            <ArrowRight size={16} aria-hidden="true" className="hidden sm:block" />
-          </Button>
+          {authed ? (
+            <>
+              <Link
+                to="/feed"
+                className="hidden min-h-[44px] items-center rounded-full px-3 font-display text-sm font-semibold whitespace-nowrap text-ink hover:bg-sunken sm:inline-flex"
+              >
+                Hi, {firstName || user.username}
+              </Link>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="inline-flex min-h-[44px] cursor-pointer items-center rounded-full border border-outline-variant bg-surface-lowest px-4 font-display text-sm font-semibold whitespace-nowrap text-on-surface transition-colors hover:bg-sunken"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <a
+                href="#join"
+                className="hidden min-h-[44px] items-center rounded-full px-4 font-display text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-sunken sm:inline-flex"
+              >
+                Sign in
+              </a>
+              <Button href="#join" className="min-h-[44px] px-4 text-sm whitespace-nowrap sm:px-5">
+                <span className="sm:hidden">Join</span>
+                <span className="hidden sm:inline">Join fellowship</span>
+                <ArrowRight size={16} aria-hidden="true" className="hidden sm:block" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -506,6 +532,7 @@ export function Safety() {
 }
 
 export function JoinSection() {
+  const { status, user, signIn, signUp, signOut } = useAuth()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -513,8 +540,10 @@ export function JoinSection() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
 
   const isLogin = mode === 'login'
+  const authed = status === 'authenticated' && user !== null
 
   function switchMode(next: 'login' | 'register') {
     setMode(next)
@@ -522,7 +551,7 @@ export function JoinSection() {
     setNotice(null)
   }
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (busy) return
     setNotice(null)
@@ -536,14 +565,31 @@ export function JoinSection() {
     }
     setError(null)
     setBusy(true)
-    window.setTimeout(() => {
+    try {
+      if (isLogin) {
+        await signIn(email.trim(), password)
+        setNotice('Signed in. Welcome back!')
+      } else {
+        await signUp(name.trim(), email.trim(), password)
+        setNotice('Account created. Welcome to the fellowship!')
+      }
+      setPassword('')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
       setBusy(false)
-      setNotice(
-        isLogin
-          ? 'Demo only. The sign-in request is not wired to the API yet.'
-          : 'Demo only. The create-account request is not wired to the API yet.',
-      )
-    }, 900)
+    }
+  }
+
+  async function handleSignOut() {
+    if (signingOut) return
+    setSigningOut(true)
+    try {
+      await signOut()
+      setNotice('Signed out.')
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -554,16 +600,49 @@ export function JoinSection() {
             Join the fellowship
           </p>
           <h2 className="mt-3 font-display text-3xl font-bold text-ink sm:text-4xl">
-            {isLogin ? 'Welcome back' : 'Join GospelKonect'}
+            {authed ? 'You are signed in' : isLogin ? 'Welcome back' : 'Join GospelKonect'}
           </h2>
           <p className="mt-2 text-[15px] text-muted">
-            {isLogin ? 'Sign in to continue' : 'Create your account to get started'}
+            {authed
+              ? 'Your session is active on this device.'
+              : isLogin
+                ? 'Sign in to continue'
+                : 'Create your account to get started'}
           </p>
         </div>
       </Reveal>
 
       <Reveal delay={0.06}>
         <div className="mx-auto mt-8 max-w-[440px] rounded-hero border border-line bg-surface-lowest p-5 shadow-card sm:p-6">
+          {authed ? (
+            <div className="text-center">
+              <p className="font-display text-[13px] font-semibold tracking-[0.12em] text-sungold uppercase">
+                Signed in
+              </p>
+              <p className="mt-2 font-display text-xl font-bold text-ink">{user.name}</p>
+              <p className="mt-1 text-[15px] text-muted">@{user.username}</p>
+              {user.email ? <p className="mt-1 text-[13px] text-faint">{user.email}</p> : null}
+              <div className="mt-5">
+                <Link
+                  to="/feed"
+                  className="inline-flex h-13 w-full items-center justify-center rounded-full bg-cerulean px-6 font-display text-[15px] font-bold text-white shadow-warm transition-opacity hover:opacity-90"
+                >
+                  Open your feed
+                </Link>
+              </div>
+              <div className="mt-3">
+                <AuthPrimaryButton type="button" busy={signingOut} onClick={() => void handleSignOut()}>
+                  Sign out
+                </AuthPrimaryButton>
+              </div>
+              {notice ? (
+                <div className="mt-4">
+                  <AuthNotice message={notice} />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <>
           <div
             role="tablist"
             aria-label="Account access"
@@ -644,6 +723,8 @@ export function JoinSection() {
               </button>
             </p>
           </form>
+            </>
+          )}
         </div>
       </Reveal>
 
