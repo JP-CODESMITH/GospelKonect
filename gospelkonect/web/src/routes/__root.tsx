@@ -10,6 +10,7 @@ import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
 import '@fontsource/inter/600.css'
 import appCss from '../styles.css?url'
+import { AuthProvider } from '../lib/auth'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -47,7 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <TanStackDevtools
           config={{ position: 'bottom-right' }}
           plugins={[{ name: 'Tanstack Router', render: <TanStackRouterDevtoolsPanel /> }]}
