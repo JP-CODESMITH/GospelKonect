@@ -11,9 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as AppFeedRouteImport } from './routes/_app.feed'
+import { Route as AppConnectRouteImport } from './routes/_app.connect'
+import { Route as AppDiscoverRouteImport } from './routes/_app.discover'
+import { Route as AppEventsRouteImport } from './routes/_app.events'
+import { Route as AppGiveRouteImport } from './routes/_app.give'
+import { Route as AppHomeRouteImport } from './routes/_app.home'
+import { Route as AppLibraryRouteImport } from './routes/_app.library'
 import { Route as AppNotificationsRouteImport } from './routes/_app.notifications'
-import { Route as AppPeopleRouteImport } from './routes/_app.people'
+import { Route as AppProfileRouteImport } from './routes/_app.profile'
+import { Route as AppSearchRouteImport } from './routes/_app.search'
+import { Route as AppSermonsRouteImport } from './routes/_app.sermons'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppChurchSlugRouteImport } from './routes/_app.church.$slug'
+import { Route as AppEventsIdRouteImport } from './routes/_app.events_.$id'
 import { Route as AppUUsernameRouteImport } from './routes/_app.u.$username'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,9 +35,34 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppFeedRoute = AppFeedRouteImport.update({
-  id: '/feed',
-  path: '/feed',
+const AppConnectRoute = AppConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDiscoverRoute = AppDiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEventsRoute = AppEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGiveRoute = AppGiveRouteImport.update({
+  id: '/give',
+  path: '/give',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHomeRoute = AppHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLibraryRoute = AppLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
@@ -35,9 +70,34 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPeopleRoute = AppPeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSearchRoute = AppSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSermonsRoute = AppSermonsRouteImport.update({
+  id: '/sermons',
+  path: '/sermons',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChurchSlugRoute = AppChurchSlugRouteImport.update({
+  id: '/church/$slug',
+  path: '/church/$slug',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEventsIdRoute = AppEventsIdRouteImport.update({
+  id: '/events_/$id',
+  path: '/events/$id',
   getParentRoute: () => AppRoute,
 } as any)
 const AppUUsernameRoute = AppUUsernameRouteImport.update({
@@ -48,39 +108,109 @@ const AppUUsernameRoute = AppUUsernameRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/feed': typeof AppFeedRoute
+  '/connect': typeof AppConnectRoute
+  '/discover': typeof AppDiscoverRoute
+  '/events': typeof AppEventsRoute
+  '/give': typeof AppGiveRoute
+  '/home': typeof AppHomeRoute
+  '/library': typeof AppLibraryRoute
   '/notifications': typeof AppNotificationsRoute
-  '/people': typeof AppPeopleRoute
+  '/profile': typeof AppProfileRoute
+  '/search': typeof AppSearchRoute
+  '/sermons': typeof AppSermonsRoute
+  '/settings': typeof AppSettingsRoute
+  '/church/$slug': typeof AppChurchSlugRoute
+  '/events/$id': typeof AppEventsIdRoute
   '/u/$username': typeof AppUUsernameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/feed': typeof AppFeedRoute
+  '/connect': typeof AppConnectRoute
+  '/discover': typeof AppDiscoverRoute
+  '/events': typeof AppEventsRoute
+  '/give': typeof AppGiveRoute
+  '/home': typeof AppHomeRoute
+  '/library': typeof AppLibraryRoute
   '/notifications': typeof AppNotificationsRoute
-  '/people': typeof AppPeopleRoute
+  '/profile': typeof AppProfileRoute
+  '/search': typeof AppSearchRoute
+  '/sermons': typeof AppSermonsRoute
+  '/settings': typeof AppSettingsRoute
+  '/church/$slug': typeof AppChurchSlugRoute
+  '/events/$id': typeof AppEventsIdRoute
   '/u/$username': typeof AppUUsernameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
-  '/_app/feed': typeof AppFeedRoute
+  '/_app/connect': typeof AppConnectRoute
+  '/_app/discover': typeof AppDiscoverRoute
+  '/_app/events': typeof AppEventsRoute
+  '/_app/give': typeof AppGiveRoute
+  '/_app/home': typeof AppHomeRoute
+  '/_app/library': typeof AppLibraryRoute
   '/_app/notifications': typeof AppNotificationsRoute
-  '/_app/people': typeof AppPeopleRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/search': typeof AppSearchRoute
+  '/_app/sermons': typeof AppSermonsRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/church/$slug': typeof AppChurchSlugRoute
+  '/_app/events_/$id': typeof AppEventsIdRoute
   '/_app/u/$username': typeof AppUUsernameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/feed' | '/notifications' | '/people' | '/u/$username'
+  fullPaths:
+    | '/'
+    | '/connect'
+    | '/discover'
+    | '/events'
+    | '/give'
+    | '/home'
+    | '/library'
+    | '/notifications'
+    | '/profile'
+    | '/search'
+    | '/sermons'
+    | '/settings'
+    | '/church/$slug'
+    | '/events/$id'
+    | '/u/$username'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/feed' | '/notifications' | '/people' | '/u/$username'
+  to:
+    | '/'
+    | '/connect'
+    | '/discover'
+    | '/events'
+    | '/give'
+    | '/home'
+    | '/library'
+    | '/notifications'
+    | '/profile'
+    | '/search'
+    | '/sermons'
+    | '/settings'
+    | '/church/$slug'
+    | '/events/$id'
+    | '/u/$username'
   id:
     | '__root__'
     | '/'
     | '/_app'
-    | '/_app/feed'
+    | '/_app/connect'
+    | '/_app/discover'
+    | '/_app/events'
+    | '/_app/give'
+    | '/_app/home'
+    | '/_app/library'
     | '/_app/notifications'
-    | '/_app/people'
+    | '/_app/profile'
+    | '/_app/search'
+    | '/_app/sermons'
+    | '/_app/settings'
+    | '/_app/church/$slug'
+    | '/_app/events_/$id'
     | '/_app/u/$username'
   fileRoutesById: FileRoutesById
 }
@@ -105,11 +235,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/feed': {
-      id: '/_app/feed'
-      path: '/feed'
-      fullPath: '/feed'
-      preLoaderRoute: typeof AppFeedRouteImport
+    '/_app/connect': {
+      id: '/_app/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof AppConnectRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/discover': {
+      id: '/_app/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof AppDiscoverRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/events': {
+      id: '/_app/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof AppEventsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/give': {
+      id: '/_app/give'
+      path: '/give'
+      fullPath: '/give'
+      preLoaderRoute: typeof AppGiveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/home': {
+      id: '/_app/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AppHomeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/library': {
+      id: '/_app/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AppLibraryRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/notifications': {
@@ -119,11 +284,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/people': {
-      id: '/_app/people'
-      path: '/people'
-      fullPath: '/people'
-      preLoaderRoute: typeof AppPeopleRouteImport
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/search': {
+      id: '/_app/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/sermons': {
+      id: '/_app/sermons'
+      path: '/sermons'
+      fullPath: '/sermons'
+      preLoaderRoute: typeof AppSermonsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/church/$slug': {
+      id: '/_app/church/$slug'
+      path: '/church/$slug'
+      fullPath: '/church/$slug'
+      preLoaderRoute: typeof AppChurchSlugRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/events_/$id': {
+      id: '/_app/events_/$id'
+      path: '/events/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof AppEventsIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/u/$username': {
@@ -137,16 +337,36 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
-  AppFeedRoute: typeof AppFeedRoute
+  AppConnectRoute: typeof AppConnectRoute
+  AppDiscoverRoute: typeof AppDiscoverRoute
+  AppEventsRoute: typeof AppEventsRoute
+  AppGiveRoute: typeof AppGiveRoute
+  AppHomeRoute: typeof AppHomeRoute
+  AppLibraryRoute: typeof AppLibraryRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
-  AppPeopleRoute: typeof AppPeopleRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppSearchRoute: typeof AppSearchRoute
+  AppSermonsRoute: typeof AppSermonsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppChurchSlugRoute: typeof AppChurchSlugRoute
+  AppEventsIdRoute: typeof AppEventsIdRoute
   AppUUsernameRoute: typeof AppUUsernameRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppFeedRoute: AppFeedRoute,
+  AppConnectRoute: AppConnectRoute,
+  AppDiscoverRoute: AppDiscoverRoute,
+  AppEventsRoute: AppEventsRoute,
+  AppGiveRoute: AppGiveRoute,
+  AppHomeRoute: AppHomeRoute,
+  AppLibraryRoute: AppLibraryRoute,
   AppNotificationsRoute: AppNotificationsRoute,
-  AppPeopleRoute: AppPeopleRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppSearchRoute: AppSearchRoute,
+  AppSermonsRoute: AppSermonsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppChurchSlugRoute: AppChurchSlugRoute,
+  AppEventsIdRoute: AppEventsIdRoute,
   AppUUsernameRoute: AppUUsernameRoute,
 }
 

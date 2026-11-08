@@ -1,46 +1,131 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ */
+/*  GospelKonect design tokens                                         */
+/*  Warm, reverent, modern: soft gold light on deep colour.            */
+/* ------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #fbf7f0;
+  --surface: #ffffff;
+  --surface-2: #f3ece0;
+  --border: #e6dccb;
+  --text: #1e1a2e;
+  --text-muted: #6b6479;
+  --primary: #4b2e83;
+  --primary-hover: #3c2369;
+  --primary-soft: #ede5f8;
+  --accent: #d9a441;
+  --accent-soft: #fbf0d5;
+  --success: #2e8b57;
+  --warning: #d98e04;
+  --danger: #c8412f;
+  --info: #2f6fb3;
+  --on-primary: #ffffff;
+
+  --gk-shadow-card: 0 2px 10px rgb(75 46 131 / 0.08);
+  --gk-shadow-raised: 0 8px 24px rgb(75 46 131 / 0.14);
+  --gk-shadow-player: 0 -6px 24px rgb(30 26 46 / 0.12);
+  --gk-gradient: linear-gradient(135deg, #4b2e83 0%, #7b4fc4 55%, #d9a441 120%);
+  --gk-scrim: rgb(18 14 29 / 0.55);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --bg: #120e1d;
+  --surface: #1c1630;
+  --surface-2: #271f42;
+  --border: #352b55;
+  --text: #f4effa;
+  --text-muted: #a79ebd;
+  --primary: #9b7be0;
+  --primary-hover: #b093ee;
+  --primary-soft: #2e2352;
+  --accent: #f0bc5a;
+  --accent-soft: #3b2f14;
+  --success: #4caf7a;
+  --warning: #e9a63a;
+  --danger: #e05a48;
+  --info: #5b93d6;
+  --on-primary: #120e1d;
+
+  --gk-shadow-card: 0 0 0 1px var(--border);
+  --gk-shadow-raised: 0 0 0 1px var(--border);
+  --gk-shadow-player: 0 0 0 1px var(--border);
+  --gk-gradient: linear-gradient(135deg, #3b2a63 0%, #6a44b0 55%, #c99a3f 120%);
+  --gk-scrim: rgb(9 6 16 / 0.72);
+}
+
 @theme {
-  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", ui-serif, Georgia, "Times New Roman", serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --color-cerulean: #1e3a8a;
-  --color-cerulean-deep: #00236f;
-  --color-cerulean-ink: #00164e;
-  --color-sungold: #d97706;
-  --color-sungold-soft: #fe932c;
-  --color-sungold-deep: #663500;
-  --color-olive: #4d7c0f;
-  --color-rose: #e11d48;
-  --color-ink: #1e293b;
-  --color-muted: #64748b;
-  --color-faint: #94a3b8;
-  --color-line: #e2e8f0;
-  --color-alabaster: #f8fafc;
-  --color-sunken: #f1f5f9;
-  --color-prayer-bg: #ecfdf5;
-  --color-prayer-line: #d1fae5;
-  --color-prayer-ink: #047857;
-  --color-lavender: #e7eeff;
-  --color-lavender-soft: #f0f3ff;
+  /* Semantic tokens (theme aware) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-on-primary: var(--on-primary);
 
-  /* Auth surface tokens, ported from mobile TokenColors/AppColors */
-  --color-on-surface: #111c2d;
-  --color-on-surface-variant: #444651;
-  --color-surface-lowest: #ffffff;
-  --color-outline: #757682;
-  --color-outline-variant: #c5c5d3;
-  --color-on-primary: #ffffff;
-  --color-error: #ba1a1a;
-  --color-error-container: #ffdad6;
+  /* Legacy aliases kept so already-wired surfaces stay themed */
+  --color-cerulean: var(--primary);
+  --color-cerulean-deep: var(--primary-hover);
+  --color-cerulean-ink: var(--primary-hover);
+  --color-sungold: var(--accent);
+  --color-sungold-soft: var(--accent);
+  --color-sungold-deep: var(--accent);
+  --color-olive: var(--success);
+  --color-rose: var(--danger);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-muted);
+  --color-line: var(--border);
+  --color-alabaster: var(--bg);
+  --color-sunken: var(--surface-2);
+  --color-prayer-bg: var(--accent-soft);
+  --color-prayer-line: var(--border);
+  --color-prayer-ink: var(--success);
+  --color-lavender: var(--primary-soft);
+  --color-lavender-soft: var(--primary-soft);
+  --color-on-surface: var(--text);
+  --color-on-surface-variant: var(--text-muted);
+  --color-surface-lowest: var(--surface);
+  --color-outline: var(--text-muted);
+  --color-outline-variant: var(--border);
+  --color-error: var(--danger);
+  --color-error-container: color-mix(in srgb, var(--danger) 16%, var(--surface));
 
-  --shadow-card: 0 2px 8px -2px rgb(30 41 59 / 0.04), 0 1px 4px -1px rgb(30 41 59 / 0.02);
-  --shadow-sheet: 0 10px 25px -5px rgb(30 41 59 / 0.08), 0 8px 10px -6px rgb(30 41 59 / 0.04);
-  --shadow-warm: 0 12px 24px -4px rgb(30 58 138 / 0.22);
+  --shadow-card: var(--gk-shadow-card);
+  --shadow-raised: var(--gk-shadow-raised);
+  --shadow-player: var(--gk-shadow-player);
+  --shadow-warm: var(--gk-shadow-raised);
+  --shadow-sheet: var(--gk-shadow-raised);
 
-  --radius-input: 16px;
-  --radius-card: 16px;
-  --radius-hero: 28px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-input: 14px;
+  --radius-card: 14px;
+  --radius-hero: 20px;
+  --radius-pill: 999px;
+
+  --ease-gk: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 * {
@@ -49,6 +134,7 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 html,
@@ -60,33 +146,160 @@ body,
 body {
   margin: 0;
   font-family: var(--font-body);
-  background: var(--color-alabaster);
-  color: var(--color-ink);
+  background: var(--bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: #1e3a8a;
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 :focus-visible {
-  outline: 2px solid #1e3a8a;
-  outline-offset: 3px;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
   border-radius: 6px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Utilities ---------------------------------------------------------- */
+
+.gradient-signature {
+  background-image: var(--gk-gradient);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.hairline {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Motion ------------------------------------------------------------- */
+
+@keyframes gk-shimmer {
+  0% {
+    background-position: -480px 0;
   }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  100% {
+    background-position: 480px 0;
   }
+}
+
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 480px 100%;
+  animation: gk-shimmer 1.4s linear infinite;
+}
+
+@keyframes gk-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-rise {
+  animation: gk-fade-rise 220ms var(--ease-gk) both;
+}
+
+@keyframes gk-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pop {
+  animation: gk-pop 250ms var(--ease-gk);
+}
+
+@keyframes gk-live {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 0%, transparent);
+  }
+}
+
+.animate-live {
+  animation: gk-live 1.6s ease-in-out infinite;
+}
+
+@keyframes gk-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: gk-float 6s ease-in-out infinite;
+}
+
+@keyframes gk-confetti {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(180px) scale(1);
+  }
+}
+
+.confetti-dot {
+  animation: gk-confetti 2.4s ease-in forwards;
 }
 
 .marquee-track {
@@ -104,8 +317,50 @@ body {
     transform: translateX(-50%);
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
   .marquee-track {
     animation: none;
   }
+}
+
+/* Range input (player + sliders) */
+.gk-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+  transition: width 150ms, height 150ms;
+}
+.gk-range:active::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+}
+.gk-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  cursor: pointer;
+}
+.gk-range:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
 }

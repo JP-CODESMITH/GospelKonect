@@ -72,7 +72,7 @@ export function Header() {
           {authed ? (
             <>
               <Link
-                to="/feed"
+                to="/home"
                 className="hidden min-h-[44px] items-center rounded-full px-3 font-display text-sm font-semibold whitespace-nowrap text-ink hover:bg-sunken sm:inline-flex"
               >
                 Hi, {firstName || user.username}
@@ -624,7 +624,7 @@ export function JoinSection() {
               {user.email ? <p className="mt-1 text-[13px] text-faint">{user.email}</p> : null}
               <div className="mt-5">
                 <Link
-                  to="/feed"
+                  to="/home"
                   className="inline-flex h-13 w-full items-center justify-center rounded-full bg-cerulean px-6 font-display text-[15px] font-bold text-white shadow-warm transition-opacity hover:opacity-90"
                 >
                   Open your feed
